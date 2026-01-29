@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
+import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Pages/ResetPassword.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
@@ -24,6 +26,9 @@ class _VerifyCodeState extends State<VerifyCode> {
   late final TextEditingController verifyCode;
 
   bool isLoadsing = false;
+  bool isResendEnabled = true;
+  int counter = 0;
+  Timer? timer;
 
   @override
   void initState() {
@@ -35,6 +40,7 @@ class _VerifyCodeState extends State<VerifyCode> {
   void dispose() {
     super.dispose();
     verifyCode.dispose();
+    timer?.cancel();
   }
 
   Future<Map<String, dynamic>> setData() async {
@@ -51,15 +57,46 @@ class _VerifyCodeState extends State<VerifyCode> {
 
   bool validationInputs() {
     if (verifyCode.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill the complete 6-digit verification code"),
-        ),
+      showSnackBar(
+        context: context,
+        message: "Please fill the complete 6-digit verification code",
+        isError: true,
       );
       return false;
     }
 
     return true;
+  }
+
+  void startCounter() {
+    counter = 60;
+    isResendEnabled = false;
+    timer = Timer.periodic(Duration(seconds: 1), (t) {
+      if (counter == 0) {
+        t.cancel();
+        setState(() => isResendEnabled = true);
+      } else {
+        setState(() => counter--);
+      }
+    });
+  }
+
+  Future resendCode() async {
+    if (!isResendEnabled) return;
+
+    startCounter();
+    verifyCode.clear();
+    showSnackBar(
+      context: context,
+      message: "A new verification code has been sent.",
+      isError: false,
+    );
+
+    await post(
+      Uri.parse("http://192.168.100.5:8000/api/auth/regenerate-code"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({"email": widget.emailText}),
+    );
   }
 
   @override
@@ -109,39 +146,37 @@ class _VerifyCodeState extends State<VerifyCode> {
                     keyboardType: TextInputType.number,
                   ),
                   Gap(40),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Didn't receive any code?  ",
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      MaterialButton(
-                        padding: EdgeInsets.zero,
-                        minWidth: 0,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        onPressed: () {},
-                        child: Text(
-                          "Resend Again",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: PrimaryColor,
-                            decoration: TextDecoration.underline,
-                            decorationColor: PrimaryColor,
-                            decorationThickness: 2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+
                   Center(
                     child: Text(
-                      "Request a new code in + Counter",
-                      style: TextStyle(color: Colors.grey),
+                      "Didn't receive any code?  ",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: MaterialButton(
+                      padding: EdgeInsets.zero,
+                      minWidth: 0,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onPressed: isResendEnabled ? resendCode : null,
+                      child: Text(
+                        isResendEnabled
+                            ? "Resend Again"
+                            : "Request a new code in $counter s",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: isResendEnabled ? PrimaryColor : Colors.grey,
+                          decoration: isResendEnabled
+                              ? TextDecoration.underline
+                              : TextDecoration.none,
+                          decorationColor: PrimaryColor,
+                          decorationThickness: 2,
+                        ),
+                      ),
                     ),
                   ),
                   Gap(50),
@@ -166,23 +201,27 @@ class _VerifyCodeState extends State<VerifyCode> {
                         if (result["success"] == true) {
                           if (widget.purpose == VerificationPurpose.signup) {
                             Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (c) => Login()),
-                          );
-                          }
-                          else{
+                              context,
+                              MaterialPageRoute(builder: (c) => Login()),
+                            );
+                          } else {
                             Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (c) => ResetPassword(email: widget.emailText, code: verifyCode.text,)),
-                          );
+                              context,
+                              MaterialPageRoute(
+                                builder: (c) => ResetPassword(
+                                  email: widget.emailText,
+                                  code: verifyCode.text,
+                                ),
+                              ),
+                            );
                           }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                result['message'] ?? 'Verification failed.',
-                              ),
-                            ),
+                          showSnackBar(
+                            context: context,
+                            message:
+                                result['message'] ??
+                                "Verification failed. Please check the code and try again.",
+                            isError: true,
                           );
                         }
 

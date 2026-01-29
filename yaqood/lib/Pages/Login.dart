@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/ForgetPassword.dart';
 import 'package:yaqood/Pages/Home.dart';
 import 'package:yaqood/Pages/Signup.dart';
@@ -21,15 +23,33 @@ class _LoginState extends State<Login> {
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();
 
-  bool isLoadsing = false;
+  bool isLoading = false;
+  bool rememberMe = false;
+  String? token;
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void dispose() {
     email.dispose();
     password.dispose();
     super.dispose();
   }
 
-  Future<Map<String, dynamic>> setData() async {
+  Future<void> saveRememberMe(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("rememberMe", value);
+  }
+
+  Future<void> saveToken(String tokenString) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("accessToken", tokenString);
+  }
+
+  Future<Map<String, dynamic>> loginRequest() async {
     var response = await post(
       Uri.parse("http://192.168.100.5:8000/api/auth/login"),
       headers: {'Content-Type': 'application/json'},
@@ -44,9 +64,11 @@ class _LoginState extends State<Login> {
 
   bool validationInputs() {
     if (email.text.isEmpty || password.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      showSnackBar(
+        context: context,
+        message: "Please fill all fields",
+        isError: true,
+      );
       return false;
     }
 
@@ -74,7 +96,7 @@ class _LoginState extends State<Login> {
                         left: 0,
                         right: 0,
                         child: Image.asset(
-                          "images/Top1.png",
+                          "assets/images/Top1.png",
                           color: PrimaryColor,
                           fit: BoxFit.cover,
                         ),
@@ -84,7 +106,7 @@ class _LoginState extends State<Login> {
                         left: 0,
                         right: 0,
                         child: Image.asset(
-                          "images/Top2.png",
+                          "assets/images/Top2.png",
                           color: Color.fromARGB(97, 76, 229, 178),
                           fit: BoxFit.cover,
                         ),
@@ -100,7 +122,7 @@ class _LoginState extends State<Login> {
                       Text("Login", style: TextStyle(fontSize: 16)),
                       Gap(20),
 
-                      Image.asset("images/login.png", width: 270),
+                      Image.asset("assets/images/login.png", width: 270),
                       Gap(40),
 
                       CustomTextfiled(
@@ -116,8 +138,22 @@ class _LoginState extends State<Login> {
                       ),
 
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: rememberMe,
+                                onChanged: (value) {
+                                  setState(() => rememberMe = value!);
+                                },
+                                activeColor: PrimaryColor,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              Text("Remember me"),
+                            ],
+                          ),
                           MaterialButton(
                             padding: EdgeInsets.all(0),
                             onPressed: () {
@@ -150,33 +186,40 @@ class _LoginState extends State<Login> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         onPressed: () async {
-                          if (!validationInputs() || isLoadsing) return;
+                          if (!validationInputs() || isLoading) return;
 
                           setState(() {
-                            isLoadsing = true;
+                            isLoading = true;
                           });
 
-                          final result = await setData();
+                          final result = await loginRequest();
                           if (result["success"] == true) {
-                            Navigator.push(
+                            token = result["data"]["accessToken"];
+                            await saveRememberMe(rememberMe);
+                            await saveToken(token!);
+
+                            if (!mounted) return;
+
+                            Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(builder: (c) => Home()),
                             );
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  result['message'] ?? 'Login failed',
-                                ),
-                              ),
+                            showSnackBar(
+                              context: context,
+                              message:
+                                  "The email or password you entered is incorrect. Please check your credentials and try again.",
+                              isError: true,
                             );
                           }
 
-                          setState(() {
-                            isLoadsing = false;
-                          });
+                          if (mounted) {
+                            setState(() {
+                              isLoading = false;
+                            });
+                          }
                         },
-                        child: isLoadsing
+                        child: isLoading
                             ? SizedBox(
                                 width: 20,
                                 height: 20,

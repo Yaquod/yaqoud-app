@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
+import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Pages/VerifyCode.dart';
 import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
@@ -61,16 +62,20 @@ class _SignupState extends State<Signup> {
         phoneNumber.text.isEmpty ||
         password.text.isEmpty ||
         confirmPassword.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      showSnackBar(
+        context: context,
+        message: "Please fill all fields",
+        isError: true,
+      );
       return false;
     }
 
     if (password.text != confirmPassword.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+      showSnackBar(
+        context: context,
+        message: "Your passwords don’t match. Please check and try again.",
+        isError: true,
+      );
       return false;
     }
 
@@ -99,7 +104,7 @@ class _SignupState extends State<Signup> {
                         left: 0,
                         right: 0,
                         child: Image.asset(
-                          "images/Top1.png",
+                          "assets/images/Top1.png",
                           color: PrimaryColor,
                           fit: BoxFit.cover,
                         ),
@@ -109,7 +114,7 @@ class _SignupState extends State<Signup> {
                         left: 0,
                         right: 0,
                         child: Image.asset(
-                          "images/Top2.png",
+                          "assets/images/Top2.png",
                           color: Color.fromARGB(97, 76, 229, 178),
                           fit: BoxFit.cover,
                         ),
@@ -187,17 +192,19 @@ class _SignupState extends State<Signup> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (c) =>
-                                    VerifyCode(emailText: email.text,purpose: VerificationPurpose.signup,),
+                                builder: (c) => VerifyCode(
+                                  emailText: email.text,
+                                  purpose: VerificationPurpose.signup,
+                                ),
                               ),
                             );
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  result['message'] ?? 'Signup failed.',
-                                ),
-                              ),
+                            showSnackBar(
+                              context: context,
+                              message:
+                                  result['message'] ??
+                                  'Something went wrong during sign up. Please try again.',
+                              isError: true,
                             );
                           }
 

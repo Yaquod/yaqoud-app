@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
+import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
@@ -45,16 +46,21 @@ class _ResetPasswordState extends State<ResetPassword> {
 
   bool validationInputs() {
     if (password.text.isEmpty || confirmPassword.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      showSnackBar(
+        context: context,
+        message: "Please fill all fields",
+        isError: true,
+      );
+
       return false;
     }
 
     if (password.text != confirmPassword.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+      showSnackBar(
+        context: context,
+        message: "Passwords do not match",
+        isError: true,
+      );
       return false;
     }
 
@@ -120,16 +126,10 @@ class _ResetPasswordState extends State<ResetPassword> {
                         if (result["success"] == true) {
                           Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(
-                              builder: (c) => Login(),
-                            ),
+                            MaterialPageRoute(builder: (c) => Login()),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result['message'] ?? 'Wrong data'),
-                            ),
-                          );
+                          showSnackBar(context: context, message: result['message'] ?? 'Wrong data', isError: true);
                         }
 
                         setState(() {

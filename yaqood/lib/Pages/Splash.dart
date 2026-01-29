@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yaqood/Pages/Home.dart';
 import 'package:yaqood/Pages/Onboarding.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
@@ -10,14 +12,26 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
+
+  @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds: 5), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (x) => Onboarding()),
-      );
-    });
+    navigateUser();
+  }
+
+  Future<void> navigateUser () async {
+    await Future.delayed(Duration(seconds: 3));
+
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString("accessToken") ;
+
+    if(!mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => Home()));
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => Onboarding()));
+    }
   }
 
   @override
@@ -42,7 +56,7 @@ class _SplashState extends State<Splash> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(34),
                   ),
-                  child: Image.asset("images/logo.png"),
+                  child: Image.asset("assets/images/logo.png"),
                 ),
                 Text(
                   "Yaqood",
@@ -59,7 +73,7 @@ class _SplashState extends State<Splash> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: Image.asset("images/buildings.png", fit: BoxFit.fill),
+            child: Image.asset("assets/images/buildings.png", fit: BoxFit.fill),
           ),
         ],
       ),

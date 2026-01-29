@@ -1,0 +1,27 @@
+Center(
+            child: MaterialButton(
+              onPressed: () {
+                logout(context);
+              },
+              color: Colors.green[200],
+              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 45),
+              child: Text(
+                "Logout",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ),
+          Gap(30),
+          Center(
+            child: MaterialButton(
+              onPressed: () {
+                getCurrentLocation();
+              },
+              color: Colors.green[200],
+              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 45),
+              child: Text(
+                "Get Current Location",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ),

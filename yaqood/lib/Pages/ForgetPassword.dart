@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
+import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/VerifyCode.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
 import 'package:yaqood/Widgets/Custom_TextFiled.dart';
@@ -39,9 +40,11 @@ class _ForgetPasswordState extends State<ForgetPassword> {
 
   bool validationInputs() {
     if (email.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill email field")));
+      showSnackBar(
+        context: context,
+        message: "Please fill email field",
+        isError: true,
+      );
       return false;
     }
 
@@ -104,14 +107,17 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (c) => VerifyCode(emailText: email.text,purpose: VerificationPurpose.resetPassword,),
+                              builder: (c) => VerifyCode(
+                                emailText: email.text,
+                                purpose: VerificationPurpose.resetPassword,
+                              ),
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result['message'] ?? 'Wrong data'),
-                            ),
+                          showSnackBar(
+                            context: context,
+                            message: result['message'] ?? 'Wrong data',
+                            isError: true,
                           );
                         }
 
