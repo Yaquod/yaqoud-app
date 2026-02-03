@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:gap/gap.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/apiKey.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Models/App_Drawer.dart';
@@ -59,9 +63,7 @@ class _HomeState extends State<Home> {
     fetchPlaceDetailsWithCoordinates: true,
   );
 
-  PolylinePoints polylinePoints = PolylinePoints(
-    apiKey: Apikey.googleMapKey,
-  );
+  PolylinePoints polylinePoints = PolylinePoints(apiKey: Apikey.googleMapKey);
 
   List<LatLng> polylineCoordinates = [];
 
@@ -231,10 +233,28 @@ class _HomeState extends State<Home> {
     if (polylineCoordinates.isNotEmpty) {
       focusOnRoute();
     }
+    // print("==========================================================");
+    // print(await tripRequest());
+    // print("==========================================================");
+
+    // final result = await tripRequest();
+    // print(result);
+    // if (result["success"] == true) {
+    //   if (result["data"]["status"] == "PENDING") {
+    //     print("==========================================================");
+    //     print("loading.......................");
+    //     print("==========================================================");
+    //   }
+    // } else {
+    //   print("..................................");
+    //   print("falire");
+    //   print("..................................");
+    // }
+
+    tripResponse();
   }
 
   // FocusOnRoute
-
   void focusOnRoute() {
     if (polylineCoordinates.isNotEmpty && mapController != null) {
       double minLat = polylineCoordinates
@@ -277,6 +297,15 @@ class _HomeState extends State<Home> {
     });
   }
 
+  // Clear Destination;
+  void clearDestinaton() {
+    setState(() {
+      destinationController.clear();
+      destinationLocation = null;
+      destinationStreetName = null;
+    });
+  }
+
   // Bottom sheet animation
   void openSheet(double size) {
     if (!sheetController.isAttached) return;
@@ -290,6 +319,64 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // Trip Request
+  Future<Map<String, dynamic>> tripRequest() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? accessToken = await prefs.getString("accessToken");
+    print("----------------------");
+    print(accessToken);
+    print("----------------------");
+    var tripData = await post(
+      Uri.parse("http://192.168.100.5:8000/api/trips/request"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${accessToken!}',
+      },
+      body: jsonEncode({
+        'startLong': startLocation?.longitude,
+        "startLat": startLocation?.latitude,
+        "endLong": destinationLocation?.longitude,
+        "endLat": destinationLocation?.latitude,
+      }),
+    );
+    print("88888888888888888888888888888888");
+    print(tripData.request?.headers);
+    print("88888888888888888888888888888888");
+
+    return jsonDecode(tripData.body);
+  }
+
+  void tripResponse() async {
+    final result = await tripRequest();
+    print(result);
+    if (result["success"] == true) {
+      if (result["data"]["status"] == "PENDING") {
+        AwesomeDialog(
+          context: context,
+          dialogType: DialogType.noHeader,
+          animType: AnimType.rightSlide,
+          title: 'Finding a nearby vechile',
+          desc: 'Locating the nearest autonomous taxi…',
+          body: Container(
+            height: 200,
+            child: Column(
+              children: [
+                Text(
+                  "Finding a nearby vechile",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                Text("Locating the nearest autonomous taxi", style: TextStyle(fontSize: 16, color: Colors.grey),),
+                Gap(50),
+                CircularProgressIndicator(color: PrimaryColor),
+              ],
+            ),
+          ),
+        ).show();
+      }
+    } else {}
+  }
+
+  // init State
   @override
   void initState() {
     super.initState();
@@ -325,6 +412,7 @@ class _HomeState extends State<Home> {
     });
   }
 
+  // dispose
   @override
   void dispose() {
     startController.dispose();
@@ -427,22 +515,6 @@ class _HomeState extends State<Home> {
                   ),
                 ),
 
-                // start Location Marker
-                // if (!hasRoute )
-                //   Center(
-                //     child: AnimatedContainer(
-                //       duration: const Duration(milliseconds: 200),
-                //       margin: EdgeInsets.only(bottom: isMapMoving ? 60 : 40),
-
-                //       child: Icon(
-                //         Icons.location_on_rounded,
-                //         size: isMapMoving ? 50 : 45,
-                //         color: Colors.red,
-                //       ),
-                //     ),
-                //   ),
-
-                // point of start Location
                 if (!hasRoute)
                   Center(
                     child: AnimatedContainer(
@@ -621,23 +693,27 @@ class _HomeState extends State<Home> {
                           if (currentLocation == null) return;
 
                           if (hasRoute) {
+                            clearRoute();
                             hasRoute = false;
                             startLocation = currentLocation;
+                            clearDestinaton();
                           }
                           mapController?.animateCamera(
                             CameraUpdate.newLatLngZoom(currentLocation!, 16),
                           );
                         },
 
-                        child: hasRoute ? Icon(
-                          Icons.arrow_forward,
-                          size: 20,
-                          color: Colors.black,
-                        ):Icon(
-                          Icons.location_searching,
-                          size: 20,
-                          color: Colors.black,
-                        )
+                        child: hasRoute
+                            ? Icon(
+                                Icons.arrow_forward,
+                                size: 20,
+                                color: Colors.black,
+                              )
+                            : Icon(
+                                Icons.location_searching,
+                                size: 20,
+                                color: Colors.black,
+                              ),
                       ),
                     ),
                   ),
@@ -833,12 +909,16 @@ class _HomeState extends State<Home> {
                               suffixIcon: destinationController.text.isNotEmpty
                                   ? IconButton(
                                       onPressed: () {
+                                        clearDestinaton();
                                         setState(() {
-                                          destinationController.clear();
-                                          destinationLocation = null;
-                                          destinationStreetName = null;
                                           clearRoute();
                                         });
+                                        mapController?.animateCamera(
+                                          CameraUpdate.newLatLngZoom(
+                                            currentLocation!,
+                                            16,
+                                          ),
+                                        );
                                       },
                                       icon: Icon(
                                         Icons.clear,
