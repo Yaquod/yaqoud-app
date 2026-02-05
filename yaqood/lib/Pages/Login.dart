@@ -77,238 +77,281 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: Column(
-              children: [
-                Container(
-                  width: 500,
-                  height: 160,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(
-                          "assets/images/Top1.png",
-                          color: PrimaryColor,
-                          fit: BoxFit.cover,
+
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFD9ECFF), Color(0xFFCFE5FF), Color(0xFFE9E3FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+
+        child: SafeArea(
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:constraints.maxHeight, 
+                  ),
+
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+
+                            constraints: BoxConstraints(maxWidth: 420),
+                    
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(150),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                    
+                            child: Column(
+                              children: [
+                                Image.asset("assets/images/logo.png", height: 100),
+
+                                Gap(12),
+
+                                CustomText(text: "Login"),
+
+                                Text(
+                                  "Enter your email and password to log in",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+
+                                Gap(24),
+                    
+                                CustomTextfiled(
+                                  hintText: "Email",
+                                  suffixIcon: Icons.email_outlined,
+                                  formController: email,
+                                ),
+                                Gap(10),
+                    
+                                CustomPasswordFiled(
+                                  hintText: "Password",
+                                  passwordController: password,
+                                ),
+                    
+                                Gap(10),
+                    
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Checkbox(
+                                          value: rememberMe,
+                    
+                                          onChanged: (value) {
+                                            setState(() => rememberMe = value!);
+                                          },
+                                          activeColor: PrimaryColor,
+                    
+                                          side: BorderSide(
+                                            color: Colors.grey,
+                                            width: 2,
+                                          ),
+                    
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        Text(
+                                          "Remember me",
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    MaterialButton(
+                                      padding: EdgeInsets.all(0),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (c) => ForgetPassword(),
+                                          ),
+                                        );
+                                      },
+
+                                      child: Text(
+                                        "Forget Password?",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: PrimaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                    
+                                Gap(10),
+                    
+                                MaterialButton(
+                                  color: PrimaryColor,
+                                  minWidth: 320,
+                                  height: 48,
+                                  elevation: 0,
+                                  highlightElevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  onPressed: () async {
+                                    if (!validationInputs() || isLoading) return;
+                    
+                                    setState(() {
+                                      isLoading = true;
+                                    });
+                    
+                                    final result = await loginRequest();
+                                    if (result["success"] == true) {
+                                      token = result["data"]["accessToken"];
+                                      await saveRememberMe(rememberMe);
+                                      await saveToken(token!);
+                    
+                                      if (!mounted) return;
+                    
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (c) => Home()),
+                                      );
+                                    } else {
+                                      showSnackBar(
+                                        context: context,
+                                        message:
+                                            "The email or password you entered is incorrect. Please check your credentials and try again.",
+                                        isError: true,
+                                      );
+                                    }
+                    
+                                    if (mounted) {
+                                      setState(() {
+                                        isLoading = false;
+                                      });
+                                    }
+                                  },
+                                  child: isLoading
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          "Login",
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                ),
+                    
+                                Gap(24),
+                    
+                                Row(
+                                  children: [
+                                    Expanded(child: Divider()),
+                                    Text(
+                                      "   Or login with Google   ",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    Expanded(child: Divider()),
+                                  ],
+                                ),
+                    
+                                Gap(24),
+                    
+                                MaterialButton(
+                                  color: PrimaryColor,
+                                  minWidth: 320,
+                                  height: 48,
+                                  elevation: 0,
+                                  highlightElevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  onPressed: () {},
+                                  child: Text(
+                                    "Continue with Google",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                    
+                                Gap(12),
+                    
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "Don't have Account? ",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                    MaterialButton(
+                                      padding: EdgeInsets.zero,
+                                      minWidth: 0,
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (c) => Signup(),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        "Signup",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: PrimaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(
-                          "assets/images/Top2.png",
-                          color: Color.fromARGB(97, 76, 229, 178),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Column(
-                    children: [
-                      CustomText(text: "Welcom back!"),
-                      Text("Login", style: TextStyle(fontSize: 16)),
-                      Gap(20),
-
-                      Image.asset("assets/images/login.png", width: 270),
-                      Gap(40),
-
-                      CustomTextfiled(
-                        hintText: "Email",
-                        suffixIcon: Icons.email_outlined,
-                        formController: email,
-                      ),
-                      Gap(20),
-
-                      CustomPasswordFiled(
-                        hintText: "Password",
-                        passwordController: password,
-                      ),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: rememberMe,
-                                onChanged: (value) {
-                                  setState(() => rememberMe = value!);
-                                },
-                                activeColor: PrimaryColor,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              Text("Remember me"),
-                            ],
-                          ),
-                          MaterialButton(
-                            padding: EdgeInsets.all(0),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (c) => ForgetPassword(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              "Forget Password?",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: PrimaryColor,
-                                decoration: TextDecoration.underline,
-                                decorationColor: PrimaryColor,
-                                decorationThickness: 2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      MaterialButton(
-                        color: PrimaryColor,
-                        minWidth: 250,
-                        height: 40,
-                        elevation: 0,
-                        highlightElevation: 0,
-                        shape: ContinuousRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        onPressed: () async {
-                          if (!validationInputs() || isLoading) return;
-
-                          setState(() {
-                            isLoading = true;
-                          });
-
-                          final result = await loginRequest();
-                          if (result["success"] == true) {
-                            token = result["data"]["accessToken"];
-                            await saveRememberMe(rememberMe);
-                            await saveToken(token!);
-
-                            if (!mounted) return;
-
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (c) => Home()),
-                            );
-                          } else {
-                            showSnackBar(
-                              context: context,
-                              message:
-                                  "The email or password you entered is incorrect. Please check your credentials and try again.",
-                              isError: true,
-                            );
-                          }
-
-                          if (mounted) {
-                            setState(() {
-                              isLoading = false;
-                            });
-                          }
-                        },
-                        child: isLoading
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                "Login",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                      ),
-                      Gap(10),
-                      Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Text(
-                            " Or login with Google ",
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      Gap(10),
-                      MaterialButton(
-                        color: PrimaryColor,
-                        minWidth: 250,
-                        height: 40,
-                        elevation: 0,
-                        highlightElevation: 0,
-                        shape: ContinuousRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        onPressed: () {},
-                        child: Text(
-                          "Continue with Google",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Don't have Account? ",
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          MaterialButton(
-                            padding: EdgeInsets.zero,
-                            minWidth: 0,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (c) => Signup()),
-                              );
-                            },
-                            child: Text(
-                              "Signup",
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: PrimaryColor,
-                                decoration: TextDecoration.underline,
-                                decorationColor: PrimaryColor,
-                                decorationThickness: 2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

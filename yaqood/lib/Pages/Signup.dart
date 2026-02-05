@@ -90,266 +90,229 @@ class _SignupState extends State<Signup> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(
-                  width: 500,
-                  height: 160,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(
-                          "assets/images/Top1.png",
-                          color: PrimaryColor,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(
-                          "assets/images/Top2.png",
-                          color: Color.fromARGB(97, 76, 229, 178),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Column(
-                    children: [
-                      CustomText(text: "Create Account"),
-                      Text(
-                        "Enter your Personal Data",
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Gap(20),
+        extendBodyBehindAppBar: true,
 
-                      CustomTextfiled(
-                        hintText: "First Name",
-                        formController: firstName,
-                      ),
-                      Gap(10),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
 
-                      CustomTextfiled(
-                        hintText: "Last Name",
-                        formController: lastName,
-                      ),
-                      Gap(10),
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: Icon(Icons.arrow_back,),
+            padding: EdgeInsets.only(top:35, left: 5),
+          ),
+        ),
 
-                      CustomTextfiled(
-                        hintText: "Email",
-                        suffixIcon: Icons.email_outlined,
-                        formController: email,
-                      ),
-                      Gap(10),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
 
-                      CustomTextfiled(
-                        hintText: "Phone Number",
-                        suffixIcon: Icons.phone_android,
-                        formController: phoneNumber,
-                      ),
-                      Gap(10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFD9ECFF), Color(0xFFCFE5FF), Color(0xFFE9E3FF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
 
-                      CustomPasswordFiled(
-                        hintText: "Create Password",
-                        passwordController: password,
-                      ),
-                      Gap(10),
+          child: SafeArea(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
 
-                      CustomPasswordFiled(
-                        hintText: "Confirm Password",
-                        passwordController: confirmPassword,
-                      ),
-                      Gap(20),
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
 
-                      MaterialButton(
-                        color: PrimaryColor,
-                        minWidth: 250,
-                        height: 40,
-                        elevation: 0,
-                        highlightElevation: 0,
-                        shape: ContinuousRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        onPressed: () async {
-                          if (!validationInputs() || isLoadsing) return;
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
 
-                          setState(() {
-                            isLoadsing = true;
-                          });
-
-                          final result = await setData();
-                          if (result["success"] == true) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (c) => VerifyCode(
-                                  emailText: email.text,
-                                  purpose: VerificationPurpose.signup,
-                                ),
-                              ),
-                            );
-                          } else {
-                            showSnackBar(
-                              context: context,
-                              message:
-                                  result['message'] ??
-                                  'Something went wrong during sign up. Please try again.',
-                              isError: true,
-                            );
-                          }
-
-                          setState(() {
-                            isLoadsing = false;
-                          });
-                        },
-                        child: isLoadsing
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                "Signup",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                      ),
-                      Gap(10),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    child: Center(
+                      child: Column(
                         children: [
-                          SizedBox(
-                            height: 15,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "By continuing you are agreeing our ",
-                                  style: GoogleFonts.poppins(fontSize: 10),
-                                ),
-                                MaterialButton(
-                                  padding: EdgeInsets.zero,
-                                  height: 10,
-                                  minWidth: 0,
-                                  onPressed: () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (c) => Signup(),
-                                      ),
-                                    );
-                                  },
-                                  child: Text(
-                                    "terms & conditions",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w400,
-                                      color: PrimaryColor,
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: PrimaryColor,
-                                      decorationThickness: 2,
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+
+                            child: Container(
+                              padding: const EdgeInsets.all(24),
+
+                              constraints: BoxConstraints(maxWidth: 420),
+
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(150),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+
+                              child: Column(
+                                children: [
+                                  CustomText(text: "Sign Up"),
+
+                                  Text(
+                                    "Create an account to continue!",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.grey,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            "and our privacy polices",
-                            style: GoogleFonts.poppins(fontSize: 10),
-                          ),
-                        ],
-                      ),
-                      Gap(10),
-                      Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Text(
-                            " Or signup with Google ",
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      Gap(10),
-                      MaterialButton(
-                        color: PrimaryColor,
-                        minWidth: 250,
-                        height: 40,
-                        elevation: 0,
-                        highlightElevation: 0,
-                        shape: ContinuousRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        onPressed: () {},
-                        child: Text(
-                          "Continue with Google",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Already have an Account? ",
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          MaterialButton(
-                            padding: EdgeInsets.zero,
-                            minWidth: 0,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (c) => Login()),
-                              );
-                            },
-                            child: Text(
-                              "Login",
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: PrimaryColor,
-                                decoration: TextDecoration.underline,
-                                decorationColor: PrimaryColor,
-                                decorationThickness: 2,
+
+                                  Gap(24),
+
+                                  CustomTextfiled(
+                                    hintText: "First Name",
+                                    formController: firstName,
+                                  ),
+
+                                  Gap(10),
+
+                                  CustomTextfiled(
+                                    hintText: "Last Name",
+                                    formController: lastName,
+                                  ),
+
+                                  Gap(10),
+
+                                  CustomTextfiled(
+                                    hintText: "Email",
+                                    suffixIcon: Icons.email_outlined,
+                                    formController: email,
+                                  ),
+
+                                  Gap(10),
+
+                                  CustomTextfiled(
+                                    hintText: "Phone Number",
+                                    suffixIcon: Icons.phone_android,
+                                    formController: phoneNumber,
+                                  ),
+
+                                  Gap(10),
+
+                                  CustomPasswordFiled(
+                                    hintText: "Create Password",
+                                    passwordController: password,
+                                  ),
+
+                                  Gap(10),
+
+                                  CustomPasswordFiled(
+                                    hintText: "Confirm Password",
+                                    passwordController: confirmPassword,
+                                  ),
+
+                                  Gap(24),
+
+                                  MaterialButton(
+                                    color: PrimaryColor,
+                                    minWidth: 320,
+                                    height: 48,
+                                    elevation: 0,
+                                    highlightElevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    onPressed: () async {
+                                      if (!validationInputs() || isLoadsing)
+                                        return;
+
+                                      setState(() {
+                                        isLoadsing = true;
+                                      });
+
+                                      final result = await setData();
+                                      if (result["success"] == true) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (c) => VerifyCode(
+                                              emailText: email.text,
+                                              purpose:
+                                                  VerificationPurpose.signup,
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        showSnackBar(
+                                          context: context,
+                                          message:
+                                              result['message'] ??
+                                              'Something went wrong during sign up. Please try again.',
+                                          isError: true,
+                                        );
+                                      }
+
+                                      setState(() {
+                                        isLoadsing = false;
+                                      });
+                                    },
+                                    child: isLoadsing
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            "Register",
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                  ),
+
+                                  Gap(12),
+
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Already have an Account? ",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      MaterialButton(
+                                        padding: EdgeInsets.zero,
+                                        minWidth: 0,
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                        onPressed: () {
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (c) => Login(),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(
+                                          "Login",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400,
+                                            color: PrimaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
-                      Gap(20),
-                    ],
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

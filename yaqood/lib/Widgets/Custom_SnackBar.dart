@@ -13,7 +13,7 @@ void showSnackBar({required context ,required String message, bool isError = tru
             children: [
               Icon(isError ? Icons.error_outline : Icons.check_circle_outline_outlined, color: Colors.white),
               SizedBox(width: 10),
-              Expanded(child: Text(message)),
+              Expanded(child: Text(message, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),)),
             ],
           ),
         ),

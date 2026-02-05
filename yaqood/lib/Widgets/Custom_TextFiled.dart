@@ -13,17 +13,19 @@ class CustomTextfiled extends StatelessWidget {
     return TextField(
       controller: formController,
       decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey[500]),
         suffixIcon: suffixIcon != null ? Icon(suffixIcon) : null,
         suffixIconColor: Colors.grey[500],
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: PrimaryColor, width: 2),
-          borderRadius: BorderRadius.circular(5),
+          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(10),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: PrimaryColor, width: 2),
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );

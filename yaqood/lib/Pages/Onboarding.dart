@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:yaqood/Models/Onboarding_Data.dart';
 import 'package:yaqood/Pages/Login.dart';
-import 'package:yaqood/Widgets/Custom_Text.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 class Onboarding extends StatefulWidget {
@@ -13,6 +12,12 @@ class Onboarding extends StatefulWidget {
 class _OnboardingState extends State<Onboarding> {
   final PageController _controller = PageController();
   int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,47 +36,90 @@ class _OnboardingState extends State<Onboarding> {
               },
               itemBuilder: (context, index) => Column(
                 children: [
-                  Gap(140),
-                  Image.asset(onboardingData[index].image, width: 278),
-                  Gap(60),
-                  CustomText(text: onboardingData[index].tittle),
-                  Gap(40),
+                  Gap(120),
                   Container(
-                    width: 283,
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xff9fcdf9),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(150),
+                      child: Image.asset(
+                        onboardingData[index].image,
+                        // width: 300,
+                        // height: 300,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Gap(50),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      onboardingData[index].tittle,
+                      style: TextStyle(
+                        fontFamily: 'AppFont',
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: PrimaryColor,
+                      ),
+                    ),
+                  ),
+                  Gap(15),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 35),
                     child: Text(
                       onboardingData[index].text,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                   ),
+
                   Gap(40),
-                  if (_currentPage == onboardingData.length - 1)
-                    MaterialButton(
+
+                  AnimatedContainer(
+                    duration: Duration(milliseconds: 300),
+                    child: MaterialButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (c) => Login()),
-                        );
+                        _currentPage == (onboardingData.length - 1)
+                            ? Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (c) => Login()),
+                              )
+                            : _controller.nextPage(
+                                duration: Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                              );
                       },
                       color: PrimaryColor,
-                      minWidth: 190,
-                      height: 45,
+                      minWidth: 250,
+                      height: 48,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 0,
                       child: Text(
-                        "GET STARTED!",
+                        _currentPage == (onboardingData.length - 1)
+                            ?
+                        "GET STARTED!" : "NEXT",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 17,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
@@ -79,7 +127,7 @@ class _OnboardingState extends State<Onboarding> {
 
           Container(
             height: 6,
-            width: 90,
+            width: 75,
             margin: EdgeInsets.only(bottom: 30),
             decoration: BoxDecoration(
               color: Colors.grey[300],
@@ -88,9 +136,10 @@ class _OnboardingState extends State<Onboarding> {
             child: Row(
               children: List.generate(
                 onboardingData.length,
-                (index) => Container(
-                  height: 6,
-                  width: 30,
+                (index) => AnimatedContainer(
+                  height: 8,
+                  width: _currentPage == index ? 35 : 20,
+                  duration: Duration(milliseconds: 300),
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? PrimaryColor
