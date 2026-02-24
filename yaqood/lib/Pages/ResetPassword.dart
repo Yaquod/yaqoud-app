@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
+import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
@@ -33,7 +34,7 @@ class _ResetPasswordState extends State<ResetPassword> {
 
   Future<Map<String, dynamic>> setData() async {
     var response = await post(
-      Uri.parse("http://192.168.100.5:8000/api/auth/reset-password"),
+      Uri.parse("${Constants.baseUrl}/auth/reset-password"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": widget.email.toString(),

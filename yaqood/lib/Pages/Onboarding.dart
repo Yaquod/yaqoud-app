@@ -55,8 +55,6 @@ class _OnboardingState extends State<Onboarding> {
                       borderRadius: BorderRadius.circular(150),
                       child: Image.asset(
                         onboardingData[index].image,
-                        // width: 300,
-                        // height: 300,
                         fit: BoxFit.cover,
                       ),
                     ),

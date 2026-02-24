@@ -1,143 +1,190 @@
-# Yaqood - Location-Based Mobile Application
+# Yaqood - Autonomous Urban Taxi Mobile Application 🚕
 
-A fully-featured Flutter mobile application for location-based services with seamless navigation, Google Maps integration, and real-time location tracking. Yaqood provides users with an intuitive interface for selecting pickup and destination locations with interactive maps and place search capabilities.
+A fully-featured Flutter mobile application for location-based ride-hailing services with seamless navigation, Google Maps integration, route visualization, and ride simulation using an HTTP polling architecture.
 
+Yaqood provides a smooth, real-world ride-hailing style experience where users can search locations, pick pickup & destination points, view routes, and simulate the process of finding a driver.
 
+---
 
 ## 🎯 Project Overview
 
-Yaqood is a comprehensive Flutter mobile application designed for location-based services. The application features a smooth user onboarding experience, secure authentication, and an interactive Google Maps interface with advanced location selection capabilities. The app is optimized for both Android and iOS platforms with Material Design principles.
+Yaqood is a comprehensive Flutter mobile application designed to simulate a modern ride-hailing experience.  
+The app focuses on delivering a clean UI, smooth navigation, real-time location handling, and scalable architecture ready for backend integration.
+
+The application is optimized for both **Android & iOS** and follows **Material Design** principles.
+
+---
 
 ## ✨ Key Features
+
+## 🟣 App Foundation
 
 ### Splash Screen
 - App branding display
 - Smooth transition into the application flow
 
 ### Onboarding
-- Multi-screen onboarding experience for new users
-- Feature highlights and app introduction
-- Leads users to authentication
+- Multi-screen onboarding experience
+- Highlights app features and workflow
+- Guides users to authentication
 
 ### Authentication
-- User login and registration screens
-- Secure authentication flow
-- Clean and intuitive UI
+- Login & Registration screens
 - Input validation and error handling
+- Clean and intuitive UI flow
 
-### Home Screen & Navigation
-- **Interactive Google Map**
-  - Real-time user location tracking
-  - Draggable camera for map exploration
-  - Dynamic location markers
+---
 
-- **Floating Action Buttons (FABs)**
-  - Quick access to map actions
-  - Location refresh functionality
-  - Intuitive icon-based controls
+## 🗺 Home Screen & Navigation
 
-- **Drawer Navigation**
-  - Slide-out menu for app navigation
-  - Access to user profile and settings
-  - Quick navigation to key sections
+### Interactive Google Map
+- Real-time user location tracking
+- Draggable camera navigation
+- Dynamic map markers
+- Smooth camera animations
 
-- **Bottom Sheet Interface**
-  - Ride-hailing style bottom sheet
-  - Location selection and confirmation
-  - Action buttons and controls
-  - Smooth animations and transitions
+### Floating Action Buttons (FABs)
+- Quick access to map actions
+- Instant location refresh
+- Simple icon-based controls
 
-### Location Selection & Search
-- **Interactive Location Picking**
-  - Drag the map to select start location
-  - Draggable markers for precise selection
-  - Start and destination location handling
+### Drawer Navigation
+- Slide-out navigation menu
+- Easy access to main sections
+- Profile & settings entry points
 
-- **Google Places Autocomplete**
-  - Real-time place search
-  - Address suggestions as user types
-  - Quick location selection from search results
+### Bottom Sheet Interface
+- Ride-hailing style bottom sheet
+- Pickup & destination selection
+- Action buttons and confirmations
+- Smooth animated transitions
 
-- **Reverse Geocoding**
-  - Display street names and addresses
-  - Convert coordinates to readable locations
-  - Address formatting and display
+---
 
-### Real-Time Features
-- Live user location tracking
-- Dynamic map updates
-- Instant location synchronization
+## 📍 Location Selection & Search
+
+### Interactive Location Picking
+- Drag map to choose pickup location
+- Draggable markers for precise positioning
+- Start & destination handling
+
+### Google Places Autocomplete
+- Real-time place search
+- Address suggestions while typing
+- Quick selection from results
+
+### Reverse Geocoding
+- Convert coordinates → readable addresses
+- Display street names and location details
+- Clean address formatting
+
+---
+
+## 🧭 Map & Navigation Enhancements
+
+### Route Drawing & Visualization
+- Polyline route between pickup & destination
+- Real-time route rendering on the map
+- Auto-fit camera to show the full route
+- Smooth camera transitions
+
+### Advanced Map Controls
+- Cancel route button to reset map state
+- Search field moves camera to searched place
+- Improved marker handling
+- Fixed FocusNode lifecycle issues
+
+### Enhanced User Interaction
+- Visual feedback during location selection
+- Smooth gestures and animations
+- Better overall UX while navigating the map
+
+---
+
+## 🚗 Ride Simulation & Driver Search
+
+### HTTP Polling Architecture
+- Simulated driver search using periodic API polling
+- Real-time trip state updates:
+  - `PENDING → SEARCHING → FOUND → COMPLETED`
+- Configurable polling intervals
+- Async-ready architecture for real backend APIs
+
+### Loading & Feedback States
+- Loading indicators during driver search
+- Snackbar feedback for errors and actions
+- Status messages during ride request lifecycle
+- Seamless UI state transitions
+
+### Backend-Ready Networking Layer
+- Prepared for REST API integration
+- Scalable structure for real ride-hailing backend
+- Clean async networking architecture
+
+---
+
 
 ## 🛠 Technical Stack
 
 ### Framework & Language
-- **Flutter** - Cross-platform mobile development framework
-- **Dart** - Programming language
+- **Flutter**
+- **Dart**
 
 ### Maps & Location Services
-- **Google Maps SDK** - Interactive map display and controls
-- **Google Places API** - Place search and autocomplete functionality
-- **Geolocator** - Real-time user location tracking
-- **Geocoding** - Reverse geocoding for address conversion
+- Google Maps SDK
+- Google Places API
+- Geolocator
+- Geocoding
+- Flutter Polyline Points
 
 ### UI & Design
-- **Material Design** - Google's design system implementation
-- **Flutter Material Components** - Pre-built UI widgets
-
-### State Management
-- **setState** - Widget-level state management
+- Material Design
+- Flutter Material Components
 
 
+
+---
 
 ## 📱 App Flow
 
-```
 Splash Screen (3 seconds)
-    ↓
-Onboarding Screens (First-time users)
-    ↓
-Authentication Flow
-    ├── Login Screen
-    └── Register Screen
-    ↓
+↓
+Onboarding Screens
+↓
+Authentication
+├── Login
+└── Register
+↓
 Home Screen
-    ├── Google Maps Interface
-    ├── Floating Action Buttons
-    ├── Drawer Navigation
-    └── Bottom Sheet for Location Selection
-```
+├── Google Map
+├── Route Selection
+├── Trip Request
+└── Vichele Search 
 
-### Detailed Flow Description
-
-**Splash Screen**
-- Displays app branding and logo
-- Initializes app resources
-- Auto-transitions to onboarding or home
-
-**Onboarding**
-- Multi-screen introduction for new users
-- Feature highlights and benefits
-- Skip or complete options
-
-**Authentication**
-- Secure login for existing users
-- Registration for new accounts
-- Input validation and error messages
-
-**Home Screen**
-- Interactive Google Map with user location
-- Floating buttons for quick actions
-- Drawer for navigation options
-- Bottom sheet for detailed interactions
+---
 
 ## 🧩 Project Structure
 
-The project follows a clean and organized Flutter structure, separating screens, widgets, models, and shared resources to ensure maintainability and scalability.
+The project follows a clean and organized Flutter architecture:
+- Screens
+- Widgets
+- Models
+- Services
+- Shared resources
+
+This structure ensures maintainability, scalability, and easy future expansion.
 
 ---
 
 ## 📌 Summary
 
-Yaqood demonstrates how Flutter can be used to build a modern, map-based mobile application with smooth UI interactions, real-time location handling, and a user experience inspired by real-world ride-hailing apps.
+**Yaqood** demonstrates how Flutter can be used to build a modern ride-hailing style application featuring:
 
+- Interactive maps  
+- Real-time location handling  
+- Route visualization  
+- Ride simulation using HTTP polling  
+- Clean architecture ready for backend integration  
+
+A complete end-to-end mobile experience inspired by real-world ride-hailing apps.
 ---

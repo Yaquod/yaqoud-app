@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
+import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
@@ -42,7 +43,7 @@ class _SignupState extends State<Signup> {
 
   Future<Map<String, dynamic>> setData() async {
     var response = await post(
-      Uri.parse("http://192.168.100.5:8000/api/auth/client/signup"),
+      Uri.parse("${Constants.baseUrl}/auth/client/signup"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": email.text,

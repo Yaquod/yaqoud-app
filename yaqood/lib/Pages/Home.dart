@@ -11,10 +11,11 @@ import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/apiKey.dart';
 import 'package:yaqood/Constants/constants.dart';
-import 'package:yaqood/Models/App_Drawer.dart';
+import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
+import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -35,6 +36,7 @@ class _HomeState extends State<Home> {
   bool isSelectedFromSearch = false;
   bool showInfoWindow = true;
   bool hasRoute = false;
+  bool isTripDialogShown = false;
 
   LatLng? startLocation;
   LatLng? currentLocation;
@@ -42,6 +44,8 @@ class _HomeState extends State<Home> {
 
   String? startStreetName;
   String? destinationStreetName;
+  String? currentTripStatus;
+  String? accessToken;
 
   CameraPosition? lastCameraPosition;
   StreamSubscription<Position>? positionStream;
@@ -71,6 +75,10 @@ class _HomeState extends State<Home> {
 
   late VoidCallback _startFocusListener;
   late VoidCallback _destinationFocusListener;
+
+  Timer? tripPollingTimer;
+
+  int tripRequestId = 0;
 
   // Location Permession
   Future<bool> checkLocationPermission() async {
@@ -233,29 +241,10 @@ class _HomeState extends State<Home> {
     if (polylineCoordinates.isNotEmpty) {
       focusOnRoute();
     }
-    // print("==========================================================");
-    // print(await tripRequest());
-    // print("==========================================================");
-
-    // final result = await tripRequest();
-    // print(result);
-    // if (result["success"] == true) {
-    //   if (result["data"]["status"] == "PENDING") {
-    //     print("==========================================================");
-    //     print("loading.......................");
-    //     print("==========================================================");
-    //   }
-    // } else {
-    //   print("..................................");
-    //   print("falire");
-    //   print("..................................");
-    // }
-
-    tripResponse();
   }
 
   // FocusOnRoute
-  void focusOnRoute() {
+  void focusOnRoute() async {
     if (polylineCoordinates.isNotEmpty && mapController != null) {
       double minLat = polylineCoordinates
           .map((p) => p.latitude)
@@ -320,60 +309,242 @@ class _HomeState extends State<Home> {
   }
 
   // Trip Request
-  Future<Map<String, dynamic>> tripRequest() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? accessToken = await prefs.getString("accessToken");
-    print("----------------------");
-    print(accessToken);
-    print("----------------------");
-    var tripData = await post(
-      Uri.parse("http://192.168.100.5:8000/api/trips/request"),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${accessToken!}',
-      },
-      body: jsonEncode({
-        'startLong': startLocation?.longitude,
-        "startLat": startLocation?.latitude,
-        "endLong": destinationLocation?.longitude,
-        "endLat": destinationLocation?.latitude,
-      }),
-    );
-    print("88888888888888888888888888888888");
-    print(tripData.request?.headers);
-    print("88888888888888888888888888888888");
+  Future<Map<String, dynamic>?> createTrip() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      accessToken = await prefs.getString("accessToken");
 
-    return jsonDecode(tripData.body);
+      if (accessToken == null) {
+        showSnackBar(context: context, message: "Login expired");
+        return null;
+      }
+
+      final response = await post(
+        Uri.parse("${Constants.baseUrl}/trips/request"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${accessToken}',
+        },
+
+        body: jsonEncode({
+          'startLong': startLocation?.longitude,
+          "startLat": startLocation?.latitude,
+          "endLong": destinationLocation?.longitude,
+          "endLat": destinationLocation?.latitude,
+        }),
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      showSnackBar(context: context, message: "Network error");
+      return null;
+    }
   }
 
-  void tripResponse() async {
-    final result = await tripRequest();
-    print(result);
+  // Start Trip Flow
+  Future<void> startTripFlow() async {
+    final result = await createTrip();
+
+    if (result == null) return;
+
     if (result["success"] == true) {
       if (result["data"]["status"] == "PENDING") {
+        isTripDialogShown = true;
+
         AwesomeDialog(
           context: context,
           dialogType: DialogType.noHeader,
           animType: AnimType.rightSlide,
-          title: 'Finding a nearby vechile',
-          desc: 'Locating the nearest autonomous taxi…',
-          body: Container(
-            height: 200,
-            child: Column(
-              children: [
-                Text(
-                  "Finding a nearby vechile",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                Text("Locating the nearest autonomous taxi", style: TextStyle(fontSize: 16, color: Colors.grey),),
-                Gap(50),
-                CircularProgressIndicator(color: PrimaryColor),
-              ],
-            ),
+
+          dismissOnTouchOutside: false,
+          dismissOnBackKeyPress: false,
+
+          body: Column(
+            children: [
+              Gap(24),
+
+              Text(
+                "Finding a nearby Vehicle",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+
+              Gap(10),
+
+              Text(
+                "Locating the nearest autonomous taxi",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+
+              Gap(40),
+              CircularProgressIndicator(color: PrimaryColor),
+
+              Gap(24),
+            ],
+          ),
+        ).show();
+
+        tripRequestId = result["data"]["id"];
+
+        startTripPolling();
+      }
+    }
+  }
+
+  // get Trip Status
+  Future<Map<String, dynamic>?> getTripStatus() async {
+    try {
+      final response = await get(
+        Uri.parse("${Constants.baseUrl}/trips/request/status/$tripRequestId"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // start Trip HTTP Polling
+  void startTripPolling() {
+    tripPollingTimer?.cancel();
+
+    tripPollingTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
+      final result = await getTripStatus();
+
+      if (result == null) return;
+
+      final status = result["data"]['status'];
+      final estimatedTime = result["data"]['estimatedTime'];
+      final estimatedFare = result["data"]['estimatedFare'];
+
+      currentTripStatus = status;
+
+      handleTripStatus(status, estimatedTime, estimatedFare);
+    });
+  }
+
+  // Handle Trip Status
+  void handleTripStatus(
+    String status,
+    double estimatedTime,
+    double estimatedFare,
+  ) {
+    if (!mounted) return;
+
+    // if (status != "PENDING") {
+    //   tripPollingTimer?.cancel();
+    // }
+
+    if (status == "COMPLETED") {
+      tripPollingTimer?.cancel();
+
+      if (isTripDialogShown) {
+        if (Navigator.canPop(context)) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        isTripDialogShown = false;
+
+        showSnackBar(
+          context: context,
+          message: "Vehicle Found",
+          isError: false,
+        );
+
+        AwesomeDialog(
+          context: context,
+          dialogType: DialogType.noHeader,
+          animType: AnimType.rightSlide,
+
+          dismissOnTouchOutside: true,
+          headerAnimationLoop: false,
+
+          btnCancelText: "Reject",
+          btnCancelOnPress: () {
+            tripPollingTimer?.cancel();
+            declineOffer();
+          },
+
+          btnOkText: "Accept",
+          btnOkOnPress: () {
+            tripPollingTimer?.cancel();
+            acceptOffer();
+          },
+
+          buttonsBorderRadius: BorderRadius.circular(25),
+          buttonsTextStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+
+          dialogBorderRadius: BorderRadius.circular(20),
+
+          body: TripDialogBody(
+            startStreetName: startStreetName ?? "Unknown Street name",
+            destinationStreetName: destinationStreetName!,
+            estimatedTime: estimatedTime,
+            estimatedFare: estimatedFare,
+            declineOffer: declineOffer,
           ),
         ).show();
       }
-    } else {}
+    }
+  }
+
+  // Decline Offer
+  Future<Map<String, dynamic>?> declineOffer() async {
+    try {
+      final response = await post(
+        Uri.parse("${Constants.baseUrl}/trips/request/$tripRequestId/decline"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${accessToken}',
+        },
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      showSnackBar(context: context, message: "Network error");
+      return null;
+    }
+  }
+
+  // Accept Offer
+  Future<Map<String, dynamic>?> acceptOffer() async {
+    try {
+      final response = await post(
+        Uri.parse("${Constants.baseUrl}/trips/request/$tripRequestId/accept"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${accessToken}',
+        },
+      );
+
+      final result = jsonDecode(response.body);
+
+      if (result["success"]) {
+        if (result["data"]["status"] == "ACCEPTED") {
+          if (Navigator.canPop(context)) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+          showSnackBar(
+            context: context,
+            message: "Your vehicle is on the way",
+            isError: false,
+          );
+        } else {
+          showSnackBar(context: context, message: "Something went wrong");
+        }
+      }
+
+      return result;
+    } catch (e) {
+      showSnackBar(context: context, message: "Network error");
+      return null;
+    }
   }
 
   // init State
@@ -424,6 +595,8 @@ class _HomeState extends State<Home> {
     sheetController.dispose();
     mapController?.dispose();
     positionStream?.cancel();
+
+    tripPollingTimer?.cancel();
 
     super.dispose();
   }
@@ -876,17 +1049,20 @@ class _HomeState extends State<Home> {
                               if (startLocation != null &&
                                   destinationLocation != null) {
                                 openSheet(Constants.minSheetSize);
+
                                 createRoute(
                                   startLocation!,
                                   destinationLocation!,
                                 );
+
+                                startTripFlow();
                               }
                             },
                           ),
 
                           Gap(20),
 
-                          // Destenation Location textField
+                          // Destination Location textField
                           GooglePlacesAutoCompleteTextFormField(
                             key: const ValueKey("destinationKey"),
                             config: _destinationConfig,
@@ -981,6 +1157,8 @@ class _HomeState extends State<Home> {
                                       startLocation!,
                                       destinationLocation!,
                                     );
+
+                                    startTripFlow();
                                   }
                                 },
 
@@ -994,6 +1172,42 @@ class _HomeState extends State<Home> {
                     );
                   },
                 ),
+
+                // Center(
+                //   child: IconButton(
+                //     onPressed: () {
+                //       AwesomeDialog(
+                //         context: context,
+                //         dialogType: DialogType.noHeader,
+                //         animType: AnimType.rightSlide,
+
+                //         dismissOnTouchOutside: true,
+                //         headerAnimationLoop: false,
+
+                //         btnCancelText: "Reject",
+                //         btnCancelOnPress: () {
+                //           declineOffer();
+                //         },
+
+                //         btnOkText: "Accept",
+                //         btnOkOnPress: () {
+                //           acceptOffer();
+                //         },
+
+                //         body: TripDialogBody(
+                //           startStreetName: startStreetName!,
+                //           destinationStreetName: "destinationStreetName!",
+                //           estimatedTime: 30,
+                //           estimatedFare: 120,
+                //           declineOffer: declineOffer,
+                //         ),
+                //       ).show();
+
+                //       // startCounter();
+                //     },
+                //     icon: Icon(Icons.ac_unit_outlined, size: 50),
+                //   ),
+                // ),
               ],
             ),
     );

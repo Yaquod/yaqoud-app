@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/ForgetPassword.dart';
 import 'package:yaqood/Pages/Home.dart';
@@ -50,7 +51,7 @@ class _LoginState extends State<Login> {
 
   Future<Map<String, dynamic>> loginRequest() async {
     var response = await post(
-      Uri.parse("http://192.168.100.5:8000/api/auth/login"),
+      Uri.parse("${Constants.baseUrl}/auth/login"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": email.text,
