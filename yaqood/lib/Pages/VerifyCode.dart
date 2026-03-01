@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
@@ -46,7 +46,7 @@ class _VerifyCodeState extends State<VerifyCode> {
 
   Future<Map<String, dynamic>> setData() async {
     var response = await post(
-      Uri.parse("${Constants.baseUrl}/auth/verify-code"),
+      Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/verify-code"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": widget.emailText,
@@ -94,7 +94,7 @@ class _VerifyCodeState extends State<VerifyCode> {
     );
 
     await post(
-      Uri.parse("${Constants.baseUrl}/auth/regenerate-code"),
+      Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/regenerate-code"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({"email": widget.emailText}),
     );

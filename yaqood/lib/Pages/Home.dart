@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart' hide Route;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:gap/gap.dart';
 import 'package:geocoding/geocoding.dart';
@@ -9,7 +10,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:yaqood/Constants/apiKey.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
@@ -59,15 +59,15 @@ class _HomeState extends State<Home> {
   FocusNode destinationFocusNode = FocusNode();
 
   final _startConfig = GoogleApiConfig(
-    apiKey: Apikey.googleMapKey,
+    apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
     fetchPlaceDetailsWithCoordinates: true,
   );
   final _destinationConfig = GoogleApiConfig(
-    apiKey: Apikey.googleMapKey,
+    apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
     fetchPlaceDetailsWithCoordinates: true,
   );
 
-  PolylinePoints polylinePoints = PolylinePoints(apiKey: Apikey.googleMapKey);
+  PolylinePoints polylinePoints = PolylinePoints(apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!);
 
   List<LatLng> polylineCoordinates = [];
 
@@ -320,7 +320,7 @@ class _HomeState extends State<Home> {
       }
 
       final response = await post(
-        Uri.parse("${Constants.baseUrl}/trips/request"),
+        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${accessToken}',
@@ -394,7 +394,7 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> getTripStatus() async {
     try {
       final response = await get(
-        Uri.parse("${Constants.baseUrl}/trips/request/status/$tripRequestId"),
+        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/status/$tripRequestId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -498,7 +498,7 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> declineOffer() async {
     try {
       final response = await post(
-        Uri.parse("${Constants.baseUrl}/trips/request/$tripRequestId/decline"),
+        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/decline"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${accessToken}',
@@ -516,7 +516,7 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> acceptOffer() async {
     try {
       final response = await post(
-        Uri.parse("${Constants.baseUrl}/trips/request/$tripRequestId/accept"),
+        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/accept"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${accessToken}',

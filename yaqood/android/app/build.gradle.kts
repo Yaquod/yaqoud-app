@@ -41,8 +41,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["ApiKey.googleMapKey"] =
-            localProperties.getProperty("googleMapKey") ?: ""
+        manifestPlaceholders["googleMapKey"] = localProperties.getProperty("googleMapKey") ?: ""
+        multiDexEnabled = true
 
     }
 

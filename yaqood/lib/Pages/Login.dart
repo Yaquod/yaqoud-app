@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/ForgetPassword.dart';
 import 'package:yaqood/Pages/Home.dart';
@@ -26,18 +28,8 @@ class _LoginState extends State<Login> {
   bool isLoading = false;
   bool rememberMe = false;
   String? token;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    email.dispose();
-    password.dispose();
-    super.dispose();
-  }
+  String? clientId = Platform.isIOS ? dotenv.env["GOOGLE_SERVER_IOS_ID"] : dotenv.env["GOOGLE_SERVER_ANDROID_ID"] ;
+  String? serverClientId = dotenv.env["GOOGLE_SERVER_CLIENT_ID"];
 
   Future<void> saveRememberMe(bool value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,7 +43,7 @@ class _LoginState extends State<Login> {
 
   Future<Map<String, dynamic>> loginRequest() async {
     var response = await post(
-      Uri.parse("${Constants.baseUrl}/auth/login"),
+      Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/login"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": email.text,
@@ -73,6 +65,57 @@ class _LoginState extends State<Login> {
     }
 
     return true;
+  }
+
+  // Google Signin
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance
+          .authenticate();
+
+      if (googleUser == null) {
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken != null) {
+        await sendIdToken(idToken);
+      }
+    } catch (e) {
+      showSnackBar(context: context, message: "$e");
+    }
+  }
+
+  // Send idToken To Backend
+  Future<void> sendIdToken(String idToken) async {
+    final response = await post(
+      Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/google"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({"idToken": idToken}),
+    );
+
+    print(response);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    GoogleSignIn.instance.initialize(
+      serverClientId: serverClientId,
+      clientId: clientId,
+    );
+  }
+
+  @override
+  void dispose() {
+    email.dispose();
+    password.dispose();
+    super.dispose();
   }
 
   @override
@@ -102,9 +145,7 @@ class _LoginState extends State<Login> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
 
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight:constraints.maxHeight, 
-                  ),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
 
                   child: Center(
                     child: Column(
@@ -116,15 +157,18 @@ class _LoginState extends State<Login> {
                             padding: const EdgeInsets.all(24),
 
                             constraints: BoxConstraints(maxWidth: 420),
-                    
+
                             decoration: BoxDecoration(
                               color: Colors.white.withAlpha(150),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                    
+
                             child: Column(
                               children: [
-                                Image.asset("assets/images/logo.png", height: 100),
+                                Image.asset(
+                                  "assets/images/logo.png",
+                                  height: 100,
+                                ),
 
                                 Gap(12),
 
@@ -139,39 +183,40 @@ class _LoginState extends State<Login> {
                                 ),
 
                                 Gap(24),
-                    
+
                                 CustomTextfiled(
                                   hintText: "Email",
                                   suffixIcon: Icons.email_outlined,
                                   formController: email,
                                 ),
                                 Gap(10),
-                    
+
                                 CustomPasswordFiled(
                                   hintText: "Password",
                                   passwordController: password,
                                 ),
-                    
+
                                 Gap(10),
-                    
+
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
                                         Checkbox(
                                           value: rememberMe,
-                    
+
                                           onChanged: (value) {
                                             setState(() => rememberMe = value!);
                                           },
                                           activeColor: PrimaryColor,
-                    
+
                                           side: BorderSide(
                                             color: Colors.grey,
                                             width: 2,
                                           ),
-                    
+
                                           materialTapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
@@ -205,9 +250,9 @@ class _LoginState extends State<Login> {
                                     ),
                                   ],
                                 ),
-                    
+
                                 Gap(10),
-                    
+
                                 MaterialButton(
                                   color: PrimaryColor,
                                   minWidth: 320,
@@ -218,23 +263,28 @@ class _LoginState extends State<Login> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   onPressed: () async {
-                                    if (!validationInputs() || isLoading) return;
-                    
+                                    if (!validationInputs() || isLoading)
+                                      return;
+
                                     setState(() {
                                       isLoading = true;
                                     });
-                    
+
                                     final result = await loginRequest();
                                     if (result["success"] == true) {
                                       token = result["data"]["accessToken"];
                                       await saveRememberMe(rememberMe);
-                                      await saveToken(token!);
-                    
+                                      if (rememberMe) {
+                                        await saveToken(token!);
+                                      }
+
                                       if (!mounted) return;
-                    
+
                                       Navigator.pushReplacement(
                                         context,
-                                        MaterialPageRoute(builder: (c) => Home()),
+                                        MaterialPageRoute(
+                                          builder: (c) => Home(),
+                                        ),
                                       );
                                     } else {
                                       showSnackBar(
@@ -244,7 +294,7 @@ class _LoginState extends State<Login> {
                                         isError: true,
                                       );
                                     }
-                    
+
                                     if (mounted) {
                                       setState(() {
                                         isLoading = false;
@@ -269,9 +319,9 @@ class _LoginState extends State<Login> {
                                           ),
                                         ),
                                 ),
-                    
+
                                 Gap(24),
-                    
+
                                 Row(
                                   children: [
                                     Expanded(child: Divider()),
@@ -285,9 +335,9 @@ class _LoginState extends State<Login> {
                                     Expanded(child: Divider()),
                                   ],
                                 ),
-                    
+
                                 Gap(24),
-                    
+
                                 MaterialButton(
                                   color: PrimaryColor,
                                   minWidth: 320,
@@ -297,7 +347,9 @@ class _LoginState extends State<Login> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  onPressed: () {},
+                                  onPressed: () async {
+                                    await signInWithGoogle();
+                                  },
                                   child: Text(
                                     "Continue with Google",
                                     style: GoogleFonts.poppins(
@@ -307,9 +359,9 @@ class _LoginState extends State<Login> {
                                     ),
                                   ),
                                 ),
-                    
+
                                 Gap(12),
-                    
+
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

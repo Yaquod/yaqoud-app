@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
-import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/VerificationPurpose.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
@@ -43,7 +43,7 @@ class _SignupState extends State<Signup> {
 
   Future<Map<String, dynamic>> setData() async {
     var response = await post(
-      Uri.parse("${Constants.baseUrl}/auth/client/signup"),
+      Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/client/signup"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": email.text,
