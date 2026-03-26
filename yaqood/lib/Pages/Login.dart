@@ -28,7 +28,9 @@ class _LoginState extends State<Login> {
   bool isLoading = false;
   bool rememberMe = false;
   String? token;
-  String? clientId = Platform.isIOS ? dotenv.env["GOOGLE_SERVER_IOS_ID"] : dotenv.env["GOOGLE_SERVER_ANDROID_ID"] ;
+  String? clientId = Platform.isIOS
+      ? dotenv.env["GOOGLE_SERVER_IOS_ID"]
+      : dotenv.env["GOOGLE_SERVER_ANDROID_ID"];
   String? serverClientId = dotenv.env["GOOGLE_SERVER_CLIENT_ID"];
 
   Future<void> saveRememberMe(bool value) async {
@@ -95,10 +97,37 @@ class _LoginState extends State<Login> {
     final response = await post(
       Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/google"),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({"idToken": idToken}),
+      body: jsonEncode({"idToken": idToken, "fcmToken": ".."}),
     );
 
-    print(response);
+    
+
+
+    final result = jsonDecode(response.body);
+
+    if(!mounted) return;
+
+    if (result["success"] == true) {
+      token = result["data"]["accessToken"];
+      await saveRememberMe(rememberMe);
+      if (rememberMe) {
+        await saveToken(token!);
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (c) => Home()),
+      );
+    } else {
+      showSnackBar(
+        context: context,
+        message:
+            "Google sign-in failed. Please try again or use another method.",
+        isError: true,
+      );
+    }
   }
 
   @override
@@ -271,6 +300,9 @@ class _LoginState extends State<Login> {
                                     });
 
                                     final result = await loginRequest();
+
+                                    if(!mounted)return;
+                                    
                                     if (result["success"] == true) {
                                       token = result["data"]["accessToken"];
                                       await saveRememberMe(rememberMe);

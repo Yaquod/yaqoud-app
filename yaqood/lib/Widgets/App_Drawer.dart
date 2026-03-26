@@ -6,6 +6,8 @@ import 'package:yaqood/Widgets/Custom_ListTile.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 Future<void> logout(BuildContext context) async {
+  Navigator.pop(context);
+  
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove("accessToken");
   await prefs.remove("rememberMe");

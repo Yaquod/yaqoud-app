@@ -857,6 +857,7 @@ class _HomeState extends State<Home> {
                       ignoring: sheetSize >= 0.8 || isMapMoving,
 
                       child: FloatingActionButton.small(
+                        heroTag: "hero-1",
                         backgroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(50),
@@ -902,6 +903,7 @@ class _HomeState extends State<Home> {
                             : (MediaQuery.sizeOf(context).height * sheetSize)),
                     left: 20,
                     child: FloatingActionButton.small(
+                      heroTag: "hero-2",
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
