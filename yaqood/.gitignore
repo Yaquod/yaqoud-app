@@ -44,4 +44,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/android/local.properties
+**/android/key.properties
+**/android/local.properties
+
+# Custom Secrets and Configs
+**/ios/Flutter/*.xcconfig
+**/ios/Flutter/Generated.xcconfig
