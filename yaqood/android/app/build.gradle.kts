@@ -1,5 +1,12 @@
 import java.util.Properties
+import java.io.File
 
+val env = Properties().apply {
+    val envFile = File(project.rootDir.parentFile, ".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use { load(it) }
+    }
+}
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -7,20 +14,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use {
-        localProperties.load(it)
-    }
-}
-
-
-
 android {
     namespace = "com.example.yaqood"
-    compileSdk = 36
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -41,9 +37,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["googleMapKey"] = localProperties.getProperty("googleMapKey") ?: ""
-        multiDexEnabled = true
-
+        manifestPlaceholders["mapsApiKey"] = env.getProperty("GOOGLE_MAPS_API_KEY")
     }
 
     buildTypes {
