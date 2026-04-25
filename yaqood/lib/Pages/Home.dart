@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -11,6 +12,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
+import 'package:yaqood/Services/notification_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -18,7 +20,8 @@ import 'package:google_places_autocomplete_text_field/google_places_autocomplete
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
 
 class Home extends StatefulWidget {
-  const Home({super.key});
+  const Home({super.key, this.initialTripId});
+  final String? initialTripId;
 
   @override
   State<Home> createState() => _HomeState();
@@ -333,6 +336,10 @@ class _HomeState extends State<Home> {
           "endLat": destinationLocation?.latitude,
         }),
       );
+      print("========================================");
+      print("start lat: ${startLocation?.latitude}");
+      print("start long: ${startLocation?.longitude}");
+      print("========================================");
 
       return jsonDecode(response.body);
     } catch (e) {
@@ -400,6 +407,9 @@ class _HomeState extends State<Home> {
           'Authorization': 'Bearer $accessToken',
         },
       );
+
+      print("-------------------- status");
+      print(response.body);
 
       return jsonDecode(response.body);
     } catch (e) {
@@ -580,6 +590,27 @@ class _HomeState extends State<Home> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       openSheet(Constants.collapseSheetSize);
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // String? status = message.data['status']; 
+      String title = message.notification?.title ?? "";
+      String body = message.notification?.body ?? "";
+      print("----------------------------------");
+      print("title: $title");
+      print("body: $body");
+      print("----------------------------------");
+
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.bottomSlide,
+        title: title,
+        desc: body,
+        btnOkOnPress: () {
+
+        },
+      ).show();
     });
   }
 
@@ -1175,41 +1206,6 @@ class _HomeState extends State<Home> {
                   },
                 ),
 
-                // Center(
-                //   child: IconButton(
-                //     onPressed: () {
-                //       AwesomeDialog(
-                //         context: context,
-                //         dialogType: DialogType.noHeader,
-                //         animType: AnimType.rightSlide,
-
-                //         dismissOnTouchOutside: true,
-                //         headerAnimationLoop: false,
-
-                //         btnCancelText: "Reject",
-                //         btnCancelOnPress: () {
-                //           declineOffer();
-                //         },
-
-                //         btnOkText: "Accept",
-                //         btnOkOnPress: () {
-                //           acceptOffer();
-                //         },
-
-                //         body: TripDialogBody(
-                //           startStreetName: startStreetName!,
-                //           destinationStreetName: "destinationStreetName!",
-                //           estimatedTime: 30,
-                //           estimatedFare: 120,
-                //           declineOffer: declineOffer,
-                //         ),
-                //       ).show();
-
-                //       // startCounter();
-                //     },
-                //     icon: Icon(Icons.ac_unit_outlined, size: 50),
-                //   ),
-                // ),
               ],
             ),
     );

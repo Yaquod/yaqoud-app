@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Models/Onboarding_Data.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -88,16 +89,22 @@ class _OnboardingState extends State<Onboarding> {
                   AnimatedContainer(
                     duration: Duration(milliseconds: 300),
                     child: MaterialButton(
-                      onPressed: () {
-                        _currentPage == (onboardingData.length - 1)
-                            ? Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (c) => Login()),
-                              )
-                            : _controller.nextPage(
-                                duration: Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
+                      onPressed: () async {
+                        if (_currentPage == (onboardingData.length - 1)) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool("isFirstTime", false);
+
+                          if (!mounted) return;
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (c) => Login()),
+                          );
+                        } else {
+                          _controller.nextPage(
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeInOut,
+                          );
+                        }
                       },
                       color: PrimaryColor,
                       minWidth: 250,
@@ -108,8 +115,8 @@ class _OnboardingState extends State<Onboarding> {
                       elevation: 0,
                       child: Text(
                         _currentPage == (onboardingData.length - 1)
-                            ?
-                        "GET STARTED!" : "NEXT",
+                            ? "GET STARTED!"
+                            : "NEXT",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 17,

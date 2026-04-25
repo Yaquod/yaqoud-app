@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yaqood/Services/notification_service.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/ForgetPassword.dart';
 import 'package:yaqood/Pages/Home.dart';
@@ -44,13 +45,17 @@ class _LoginState extends State<Login> {
   }
 
   Future<Map<String, dynamic>> loginRequest() async {
+    String? fcmToken = await NotificationService().getDeviceToken();
+    print("===========================");
+    print("FCM Token to be sent: $fcmToken");
+
     var response = await post(
       Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/login"),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "email": email.text,
         "password": password.text,
-        "fcmToken": "..",
+        "fcmToken": fcmToken ?? "..",
       }),
     );
     return jsonDecode(response.body);
@@ -94,10 +99,14 @@ class _LoginState extends State<Login> {
 
   // Send idToken To Backend
   Future<void> sendIdToken(String idToken) async {
+    String? fcmToken = await NotificationService().getDeviceToken();
+    print("===========================");
+    print("FCM Token to be sent: $fcmToken");
+
     final response = await post(
       Uri.parse("${dotenv.env["API_BASE_URL"]}/auth/google"),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({"idToken": idToken, "fcmToken": ".."}),
+      body: jsonEncode({"idToken": idToken, "fcmToken": fcmToken ?? ".."}),
     );
 
     
