@@ -42,6 +42,7 @@ class _LoginState extends State<Login> {
   Future<void> saveToken(String tokenString) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString("accessToken", tokenString);
+    print("------------accessToken--------------$tokenString");
   }
 
   Future<Map<String, dynamic>> loginRequest() async {
@@ -77,12 +78,8 @@ class _LoginState extends State<Login> {
   // Google Signin
   Future<void> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance
           .authenticate();
-
-      if (googleUser == null) {
-        return;
-      }
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;

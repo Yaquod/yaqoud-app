@@ -47,6 +47,7 @@ app.*.map.json
 /android/app/release
 **/android/key.properties
 **/android/local.properties
+android/app/google-services.json
 
 # Custom Secrets and Configs
 **/ios/Flutter/*.xcconfig

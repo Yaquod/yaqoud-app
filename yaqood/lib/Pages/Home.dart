@@ -12,9 +12,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
-import 'package:yaqood/Services/notification_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
+import 'package:yaqood/Widgets/Paymob_WebView.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
@@ -70,7 +70,9 @@ class _HomeState extends State<Home> {
     fetchPlaceDetailsWithCoordinates: true,
   );
 
-  PolylinePoints polylinePoints = PolylinePoints(apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!);
+  PolylinePoints polylinePoints = PolylinePoints(
+    apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
+  );
 
   List<LatLng> polylineCoordinates = [];
 
@@ -317,6 +319,8 @@ class _HomeState extends State<Home> {
       final prefs = await SharedPreferences.getInstance();
       accessToken = await prefs.getString("accessToken");
 
+      print("********************accessToken**********$accessToken");
+
       if (accessToken == null) {
         showSnackBar(context: context, message: "Login expired");
         return null;
@@ -401,7 +405,9 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> getTripStatus() async {
     try {
       final response = await get(
-        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/status/$tripRequestId"),
+        Uri.parse(
+          "${dotenv.env["API_BASE_URL"]}/trips/request/status/$tripRequestId",
+        ),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -508,7 +514,9 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> declineOffer() async {
     try {
       final response = await post(
-        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/decline"),
+        Uri.parse(
+          "${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/decline",
+        ),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${accessToken}',
@@ -526,7 +534,9 @@ class _HomeState extends State<Home> {
   Future<Map<String, dynamic>?> acceptOffer() async {
     try {
       final response = await post(
-        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/accept"),
+        Uri.parse(
+          "${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/accept",
+        ),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${accessToken}',
@@ -553,6 +563,49 @@ class _HomeState extends State<Home> {
       return result;
     } catch (e) {
       showSnackBar(context: context, message: "Network error");
+      return null;
+    }
+  }
+
+  Future<String?> startPayment() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      accessToken = prefs.getString("accessToken");
+
+      final response = await post(
+        Uri.parse("${dotenv.env["API_BASE_URL"]}/payments/cards"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+
+        if (result["success"] && result["data"] != null) {
+          return result["data"]["checkoutUrl"];
+        } else {
+          if (mounted) {
+            showSnackBar(
+              context: context,
+              message: result["message"] ?? "Error processing payment",
+            );
+          }
+          return null;
+        }
+      } else {
+        if (mounted) {
+          showSnackBar(
+            context: context,
+            message: "Server error: ${response.statusCode}",
+          );
+        }
+        print("Response Body: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      if (mounted) showSnackBar(context: context, message: "Network error: $e");
       return null;
     }
   }
@@ -593,7 +646,7 @@ class _HomeState extends State<Home> {
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // String? status = message.data['status']; 
+      // String? status = message.data['status'];
       String title = message.notification?.title ?? "";
       String body = message.notification?.body ?? "";
       print("----------------------------------");
@@ -607,9 +660,7 @@ class _HomeState extends State<Home> {
         animType: AnimType.bottomSlide,
         title: title,
         desc: body,
-        btnOkOnPress: () {
-
-        },
+        btnOkOnPress: () {},
       ).show();
     });
   }
@@ -1206,6 +1257,24 @@ class _HomeState extends State<Home> {
                   },
                 ),
 
+                Center(
+                  child: MaterialButton(
+                    onPressed: () async {
+                      String? url = await startPayment();
+
+                      if (url != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) => PaymobWebView(url: url),
+                          ),
+                        );
+                      }
+                    },
+                    color: Colors.lightBlue,
+                    child: Text("Pay for Yaquod"),
+                  ),
+                ),
               ],
             ),
     );
