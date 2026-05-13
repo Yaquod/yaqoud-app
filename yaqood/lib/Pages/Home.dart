@@ -14,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
-import 'package:yaqood/Widgets/Paymob_WebView.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
@@ -450,10 +449,6 @@ class _HomeState extends State<Home> {
   ) {
     if (!mounted) return;
 
-    // if (status != "PENDING") {
-    //   tripPollingTimer?.cancel();
-    // }
-
     if (status == "COMPLETED") {
       tripPollingTimer?.cancel();
 
@@ -567,48 +562,6 @@ class _HomeState extends State<Home> {
     }
   }
 
-  Future<String?> startPayment() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      accessToken = prefs.getString("accessToken");
-
-      final response = await post(
-        Uri.parse("${dotenv.env["API_BASE_URL"]}/payments/cards"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-
-        if (result["success"] && result["data"] != null) {
-          return result["data"]["checkoutUrl"];
-        } else {
-          if (mounted) {
-            showSnackBar(
-              context: context,
-              message: result["message"] ?? "Error processing payment",
-            );
-          }
-          return null;
-        }
-      } else {
-        if (mounted) {
-          showSnackBar(
-            context: context,
-            message: "Server error: ${response.statusCode}",
-          );
-        }
-        print("Response Body: ${response.body}");
-        return null;
-      }
-    } catch (e) {
-      if (mounted) showSnackBar(context: context, message: "Network error: $e");
-      return null;
-    }
-  }
 
   // init State
   @override
@@ -1257,24 +1210,6 @@ class _HomeState extends State<Home> {
                   },
                 ),
 
-                Center(
-                  child: MaterialButton(
-                    onPressed: () async {
-                      String? url = await startPayment();
-
-                      if (url != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (c) => PaymobWebView(url: url),
-                          ),
-                        );
-                      }
-                    },
-                    color: Colors.lightBlue,
-                    child: Text("Pay for Yaquod"),
-                  ),
-                ),
               ],
             ),
     );

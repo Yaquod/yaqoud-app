@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Pages/Login.dart';
+import 'package:yaqood/Pages/wallet_screen.dart';
 import 'package:yaqood/Widgets/Custom_ListTile.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 Future<void> logout(BuildContext context) async {
   Navigator.pop(context);
-  
+
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove("accessToken");
   await prefs.remove("rememberMe");
@@ -99,7 +100,13 @@ class AppDrawer extends StatelessWidget {
                 CustomListTile(
                   title: "My Wallet",
                   icon: Icons.wallet_rounded,
-                  onTap: () {},
+                  onTap: () async{
+                    final navigator = Navigator.of(context);
+
+                    navigator.pop();
+
+                    navigator.push(MaterialPageRoute(builder: (c)=> WalletScreen()));
+                  },
                 ),
 
                 Gap(10),
