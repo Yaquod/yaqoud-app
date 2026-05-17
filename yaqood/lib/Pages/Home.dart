@@ -14,6 +14,9 @@ import 'package:yaqood/Services/map_routing_service.dart';
 import 'package:yaqood/Services/trip_api_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
+import 'package:yaqood/Widgets/Map/map_buttons.dart';
+import 'package:yaqood/Widgets/Map/map_center_pin.dart';
+import 'package:yaqood/Widgets/Map/map_info_window.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
@@ -501,6 +504,29 @@ class _HomeState extends State<Home> {
     startTripFlow();
   }
 
+  void _handleLocationGPSPressed() {
+    if (currentLocation == null) return;
+
+    if (hasRoute) {
+      setState(() {
+        hasRoute = false;
+        startLocation = currentLocation;
+
+        polylineCoordinates.clear();
+        polylines.clear();
+        showInfoWindow = true;
+
+        destinationController.clear();
+        destinationLocation = null;
+        destinationStreetName = null;
+      });
+    }
+
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(currentLocation!, 16),
+    );
+  }
+
   // init State
   @override
   void initState() {
@@ -663,238 +689,37 @@ class _HomeState extends State<Home> {
                   ),
                 ),
 
-                if (!hasRoute)
-                  Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: isMapMoving ? 10 : 0,
-                      height: isMapMoving ? 40 : 0,
-
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.green.shade300,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
+                if (!hasRoute) MapCenterPin(isMapMoving: isMapMoving),
 
                 // info window
-                if (startStreetName != null &&
-                    !isMapMoving &&
-                    sheetSize < 0.5 &&
-                    showInfoWindow)
-                  Positioned(
-                    bottom: (MediaQuery.sizeOf(context).height * 0.5 + 50),
-                    left: 0,
-                    right: 0,
-
-                    child: Align(
-                      alignment: Alignment.topCenter,
-
-                      child: GestureDetector(
-                        onTap: () {
-                          openSheet(Constants.maxSheetSize);
-                        },
-
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 15,
-                            vertical: 5,
-                          ),
-
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-
-                            borderRadius: BorderRadius.circular(10),
-
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 5,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-
-                            children: [
-                              Icon(Icons.arrow_back_ios),
-
-                              SizedBox(width: 10),
-
-                              Flexible(
-                                fit: FlexFit.loose,
-
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-
-                                  children: [
-                                    Text(
-                                      "PickUp Location",
-
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xffC8C7CC),
-                                        height: 0,
-                                      ),
-
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-
-                                    Text(
-                                      startStreetName ?? "Unknown Street",
-
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                        color: Colors.black,
-                                      ),
-
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Floating button for Drawer
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 50),
-                  curve: Curves.easeOut,
-                  top:
-                      30 -
-                      (isMapMoving
-                          ? 60
-                          : (((sheetSize - 0.8) /
-                                        (Constants.maxSheetSize - 0.8))
-                                    .clamp(0.0, 1.0) *
-                                60)),
-                  left: 20,
-
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 50),
-                    curve: Curves.easeOut,
-                    opacity: isMapMoving
-                        ? 0
-                        : (1 -
-                              ((sheetSize - 0.8) /
-                                      (Constants.maxSheetSize - 0.8))
-                                  .clamp(0.0, 1.0)),
-
-                    child: IgnorePointer(
-                      ignoring:
-                          sheetSize >= Constants.maxSheetSize || isMapMoving,
-
-                      child: IconButton(
-                        onPressed: () {
-                          scaffoldKey.currentState?.openDrawer();
-                        },
-
-                        icon: const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.menu, color: Colors.black),
-                        ),
-                      ),
-                    ),
-                  ),
+                MapInfoWindow(
+                  startStreetName: startStreetName,
+                  isMapMoving: isMapMoving,
+                  sheetSize: sheetSize,
+                  showInfoWindow: showInfoWindow,
+                  onTap: () => openSheet(Constants.maxSheetSize),
                 ),
 
-                // Floating button for Location
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 50),
-                  curve: Curves.easeOut,
-
-                  bottom:
-                      20 +
-                      (isMapMoving
-                          ? -20
-                          : (MediaQuery.sizeOf(context).height * sheetSize)),
-                  right: 20,
-
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 50),
-                    curve: Curves.easeOut,
-                    opacity: isMapMoving ? 0 : (sheetSize >= 0.8 ? 0 : 1),
-
-                    child: IgnorePointer(
-                      ignoring: sheetSize >= 0.8 || isMapMoving,
-
-                      child: FloatingActionButton.small(
-                        heroTag: "hero-1",
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-
-                        onPressed: () {
-                          if (currentLocation == null) return;
-
-                          if (hasRoute) {
-                            clearRoute();
-                            hasRoute = false;
-                            startLocation = currentLocation;
-                            clearDestinaton();
-                          }
-                          mapController?.animateCamera(
-                            CameraUpdate.newLatLngZoom(currentLocation!, 16),
-                          );
-                        },
-
-                        child: hasRoute
-                            ? Icon(
-                                Icons.arrow_forward,
-                                size: 20,
-                                color: Colors.black,
-                              )
-                            : Icon(
-                                Icons.location_searching,
-                                size: 20,
-                                color: Colors.black,
-                              ),
-                      ),
-                    ),
-                  ),
+                MapDrawerButton(
+                  isMapMoving: isMapMoving,
+                  sheetSize: sheetSize,
+                  onPressed: () => scaffoldKey.currentState?.openDrawer(),
                 ),
 
-                // floating button for focusOnRoute
-                if (hasRoute && polylineCoordinates.isNotEmpty)
-                  Positioned(
-                    bottom:
-                        20 +
-                        (isMapMoving
-                            ? -20
-                            : (MediaQuery.sizeOf(context).height * sheetSize)),
-                    left: 20,
-                    child: FloatingActionButton.small(
-                      heroTag: "hero-2",
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
+                MapLocationButton(
+                  isMapMoving: isMapMoving,
+                  sheetSize: sheetSize,
+                  hasRoute: hasRoute,
+                  onPressed: _handleLocationGPSPressed,
+                ),
 
-                      onPressed: () {
-                        focusOnRoute();
-                      },
-
-                      child: const Icon(
-                        Icons.route,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
+                MapFocusRouteButton(
+                  hasRoute: hasRoute,
+                  polylineCoordinates: polylineCoordinates,
+                  isMapMoving: isMapMoving,
+                  sheetSize: sheetSize,
+                  onPressed: focusOnRoute,
+                ),
 
                 // Bottom Sheet
                 DraggableScrollableSheet(
