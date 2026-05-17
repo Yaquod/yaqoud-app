@@ -4,7 +4,6 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:gap/gap.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -13,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/ride_step.dart';
 import 'package:yaqood/Services/location_service.dart';
+import 'package:yaqood/Services/map_routing_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -68,12 +68,7 @@ class _HomeState extends State<Home> {
     fetchPlaceDetailsWithCoordinates: true,
   );
 
-  PolylinePoints polylinePoints = PolylinePoints(
-    apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
-  );
-
   List<LatLng> polylineCoordinates = [];
-
   Set<Polyline> polylines = {};
 
   late VoidCallback _startFocusListener;
@@ -86,6 +81,7 @@ class _HomeState extends State<Home> {
   RideStep currentStep = RideStep.search;
 
   final LocationService _locationService = LocationService();
+  final MapRoutingService _mapRoutingService = MapRoutingService();
 
   // assign start Location to it`s textField
   void updatesStartFieldWithStartLocation() async {
@@ -166,46 +162,35 @@ class _HomeState extends State<Home> {
       showInfoWindow = false;
       hasRoute = true;
     });
+
     polylineCoordinates.clear();
     polylines.clear();
-
-    RoutesApiRequest request = RoutesApiRequest(
-      origin: PointLatLng(start.latitude, start.longitude),
-      destination: PointLatLng(destination.latitude, destination.longitude),
-      travelMode: TravelMode.driving,
-
-      routingPreference: RoutingPreference.trafficAware,
-    );
 
     print("*************** lat: ${start.latitude} *********************");
     print("*************** long: ${start.longitude} *********************");
 
-    RoutesApiResponse response = await polylinePoints
-        .getRouteBetweenCoordinatesV2(request: request);
+    final routeData = await _mapRoutingService.getRouteData(
+      start: start,
+      destination: destination,
+    );
 
-    if (response.routes.isNotEmpty) {
-      Route route = response.routes.first;
+    List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
+    Set<Polyline> computedPolylines = (routeData['polylines'] as Set).cast<Polyline>();
 
-      List<PointLatLng> points = route.polylinePoints ?? [];
+    if (points.isNotEmpty) {
+      setState(() {
+        polylineCoordinates = points;
+        polylines = computedPolylines;
+      });
 
-      polylineCoordinates = points
-          .map((p) => LatLng(p.latitude, p.longitude))
-          .toList();
-    }
-
-    setState(() {
-      polylines.add(
-        Polyline(
-          polylineId: PolylineId("route"),
-          points: polylineCoordinates,
-          width: 5,
-          color: Colors.blue,
-        ),
-      );
-    });
-
-    if (polylineCoordinates.isNotEmpty) {
-      focusOnRoute();
+      if (polylineCoordinates.isNotEmpty) {
+        focusOnRoute();
+      }
+    } else {
+      setState(() {
+        hasRoute = false;
+        showInfoWindow = true;
+      });
     }
   }
 
@@ -713,7 +698,9 @@ class _HomeState extends State<Home> {
                         isMapMoving = false;
                       });
 
-                      String street = await _locationService.getStreetName(targetLocation);
+                      String street = await _locationService.getStreetName(
+                        targetLocation,
+                      );
                       if (!hasRoute) {
                         setState(() {
                           startLocation = targetLocation;
