@@ -6,13 +6,13 @@ import 'package:flutter/material.dart' hide Route;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:gap/gap.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/ride_step.dart';
+import 'package:yaqood/Services/location_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -85,55 +85,13 @@ class _HomeState extends State<Home> {
 
   RideStep currentStep = RideStep.search;
 
-  // Location Permession
-  Future<bool> checkLocationPermission() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (!mounted) return false;
-
-      showSnackBar(context: context, message: "Turn on Location Service");
-
-      return false;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      if (!mounted) return false;
-
-      showSnackBar(context: context, message: "Location permission denied");
-
-      return false;
-    }
-
-    return true;
-  }
-
-  // Get Streat name from location
-  Future<String> getStreetName(LatLng location) async {
-    List<Placemark> placemarks = await placemarkFromCoordinates(
-      location.latitude,
-
-      location.longitude,
-    );
-
-    if (placemarks.isNotEmpty) {
-      return placemarks[0].thoroughfare ?? "Unknown Street";
-    }
-
-    return "";
-  }
+  final LocationService _locationService = LocationService();
 
   // assign start Location to it`s textField
   void updatesStartFieldWithStartLocation() async {
     if (currentLocation == null) return;
 
-    String street = await getStreetName(startLocation!);
+    String street = await _locationService.getStreetName(startLocation!);
 
     setState(() {
       startController.text = street;
@@ -142,7 +100,7 @@ class _HomeState extends State<Home> {
 
   // Location Stream
   void currentLocationStream() async {
-    hasPermission = await checkLocationPermission();
+    hasPermission = await _locationService.checkLocationPermission();
 
     if (!hasPermission) return;
 
@@ -160,7 +118,7 @@ class _HomeState extends State<Home> {
           currentLocation = newLatLng;
 
           if (startLocation == null && !isSelectedFromSearch && !isMapMoving) {
-            String street = await getStreetName(newLatLng);
+            String street = await _locationService.getStreetName(newLatLng);
 
             setState(() {
               startLocation = newLatLng;
@@ -755,7 +713,7 @@ class _HomeState extends State<Home> {
                         isMapMoving = false;
                       });
 
-                      String street = await getStreetName(targetLocation);
+                      String street = await _locationService.getStreetName(targetLocation);
                       if (!hasRoute) {
                         setState(() {
                           startLocation = targetLocation;
