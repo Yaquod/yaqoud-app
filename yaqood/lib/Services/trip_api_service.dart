@@ -1,0 +1,104 @@
+import 'dart:convert';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class TripApiService {
+  final String baseUrl =
+      dotenv.env["API_BASE_URL"] ?? "http://192.168.100.5:8000/api";
+
+  Future<Map<String, String>?> _getHeaders() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('accessToken');
+
+    if (token == null) {
+      return null;
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<Map<String, dynamic>?> requestTrip({
+    required LatLng start,
+    required LatLng destination,
+  }) async {
+    try {
+      final url = Uri.parse("$baseUrl/trips/request");
+      final headers = await _getHeaders();
+
+      if (headers == null) {
+        return {"error_type": "auth_error"};
+      }
+
+      final body = jsonEncode({
+        'startLong': start.longitude,
+        'startLat': start.latitude,
+        'endLong': destination.longitude,
+        'endLat': destination.latitude,
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - createTrip Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
+
+  Future<Map<String, dynamic>?> getTripStatus(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/request/status/$tripRequestId');
+      final headers = await _getHeaders();
+
+      if (headers == null) {
+        return {"error_type": "auth_error"};
+      }
+
+      final response = await http.get(url, headers: headers);
+
+      print("-------------------- status");
+      print(response.body);
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - getTripStatus Error: $e");
+      // return {"error_type": "network_error"}; 
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> acceptOffer(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/request/$tripRequestId/accept');
+      final headers = await _getHeaders();
+
+      if (headers == null) return {"error_type": "auth_error"};
+
+      final response = await http.post(url, headers: headers);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - acceptOffer Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
+
+  Future<Map<String, dynamic>?> declineOffer(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/request/$tripRequestId/decline');
+      final headers = await _getHeaders();
+
+      if (headers == null) return {"error_type": "auth_error"};
+
+      final response = await http.post(url, headers: headers);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - declineOffer Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
+}

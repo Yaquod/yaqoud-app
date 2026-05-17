@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart' hide Route;
@@ -7,12 +6,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/ride_step.dart';
 import 'package:yaqood/Services/location_service.dart';
 import 'package:yaqood/Services/map_routing_service.dart';
+import 'package:yaqood/Services/trip_api_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -50,7 +48,7 @@ class _HomeState extends State<Home> {
   String? startStreetName;
   String? destinationStreetName;
   String? currentTripStatus;
-  String? accessToken;
+  String? tripRequestId;
 
   CameraPosition? lastCameraPosition;
   StreamSubscription<Position>? positionStream;
@@ -76,12 +74,11 @@ class _HomeState extends State<Home> {
 
   Timer? tripPollingTimer;
 
-  int tripRequestId = 0;
-
   RideStep currentStep = RideStep.search;
 
   final LocationService _locationService = LocationService();
   final MapRoutingService _mapRoutingService = MapRoutingService();
+  final TripApiService _tripApiService = TripApiService();
 
   // assign start Location to it`s textField
   void updatesStartFieldWithStartLocation() async {
@@ -175,7 +172,8 @@ class _HomeState extends State<Home> {
     );
 
     List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
-    Set<Polyline> computedPolylines = (routeData['polylines'] as Set).cast<Polyline>();
+    Set<Polyline> computedPolylines = (routeData['polylines'] as Set)
+        .cast<Polyline>();
 
     if (points.isNotEmpty) {
       setState(() {
@@ -259,109 +257,66 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // Trip Request
-  Future<Map<String, dynamic>?> createTrip() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      accessToken = await prefs.getString("accessToken");
-
-      print("********************accessToken**********$accessToken");
-
-      if (accessToken == null) {
-        showSnackBar(context: context, message: "Login expired");
-        return null;
-      }
-
-      final response = await post(
-        Uri.parse("${dotenv.env["API_BASE_URL"]}/trips/request"),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${accessToken}',
-        },
-
-        body: jsonEncode({
-          'startLong': startLocation?.longitude,
-          "startLat": startLocation?.latitude,
-          "endLong": destinationLocation?.longitude,
-          "endLat": destinationLocation?.latitude,
-        }),
-      );
-
-      return jsonDecode(response.body);
-    } catch (e) {
-      showSnackBar(context: context, message: "Network error");
-      return null;
-    }
-  }
-
   // Start Trip Flow
   Future<void> startTripFlow() async {
-    final result = await createTrip();
+    if (startLocation == null || destinationLocation == null) return;
+
+    final result = await _tripApiService.requestTrip(
+      start: LatLng(startLocation!.latitude, startLocation!.longitude),
+      destination: LatLng(
+        destinationLocation!.latitude,
+        destinationLocation!.longitude,
+      ),
+    );
 
     if (result == null) return;
 
-    if (result["success"] == true) {
-      if (result["data"]["status"] == "PENDING") {
-        isTripDialogShown = true;
-
-        AwesomeDialog(
-          context: context,
-          dialogType: DialogType.noHeader,
-          animType: AnimType.rightSlide,
-
-          dismissOnTouchOutside: false,
-          dismissOnBackKeyPress: false,
-
-          body: Column(
-            children: [
-              Gap(24),
-
-              Text(
-                "Finding a nearby Vehicle",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-
-              Gap(10),
-
-              Text(
-                "Locating the nearest autonomous taxi",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-
-              Gap(40),
-              CircularProgressIndicator(color: PrimaryColor),
-
-              Gap(24),
-            ],
-          ),
-        ).show();
-
-        tripRequestId = result["data"]["id"];
-
-        startTripPolling();
-      }
+    if (result["error_type"] == "auth_error") {
+      showSnackBar(context: context, message: "Login expired");
+      return;
     }
-  }
 
-  // get Trip Status
-  Future<Map<String, dynamic>?> getTripStatus() async {
-    try {
-      final response = await get(
-        Uri.parse(
-          "${dotenv.env["API_BASE_URL"]}/trips/request/status/$tripRequestId",
+    if (result["error_type"] == "network_error") {
+      showSnackBar(context: context, message: "Network error");
+      return;
+    }
+
+    if (result["success"] == true && result["data"]["status"] == "PENDING") {
+      isTripDialogShown = true;
+      tripRequestId = result["data"]["id"].toString();
+
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.noHeader,
+        animType: AnimType.rightSlide,
+        dismissOnTouchOutside: false,
+        dismissOnBackKeyPress: false,
+
+        body: Column(
+          children: [
+            Gap(24),
+
+            Text(
+              "Finding a nearby Vehicle",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+
+            Gap(10),
+
+            Text(
+              "Locating the nearest autonomous taxi",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+
+            Gap(40),
+            CircularProgressIndicator(color: PrimaryColor),
+
+            Gap(24),
+          ],
         ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-      );
+      ).show();
 
-      print("-------------------- status");
-      print(response.body);
-
-      return jsonDecode(response.body);
-    } catch (e) {
-      return null;
+      startTripPolling();
     }
   }
 
@@ -369,14 +324,37 @@ class _HomeState extends State<Home> {
   void startTripPolling() {
     tripPollingTimer?.cancel();
 
+    if (tripRequestId == null) return;
+
     tripPollingTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
-      final result = await getTripStatus();
+      final result = await _tripApiService.getTripStatus(tripRequestId!);
 
       if (result == null) return;
 
-      final status = result["data"]['status'];
-      final estimatedTime = result["data"]['estimatedTime'];
-      final estimatedFare = result["data"]['estimatedFare'];
+      final data = result["data"];
+      if (data == null) {
+        print("Warning: result['data'] is null, skipping this polling tick");
+        return;
+      }
+
+      // Safely extract values with null checks and type casting
+      final status = data['status'] as String?;
+      final estimatedTimeValue = data['estimatedTime'];
+      final estimatedFareValue = data['estimatedFare'];
+
+      // Validate that status is not null
+      if (status == null) {
+        print("Warning: status is null, skipping this polling tick");
+        return;
+      }
+
+      // Safely cast estimatedTime and estimatedFare to double
+      final estimatedTime = estimatedTimeValue != null 
+          ? (estimatedTimeValue as num).toDouble() 
+          : 0.0;
+      final estimatedFare = estimatedFareValue != null 
+          ? (estimatedFareValue as num).toDouble() 
+          : 0.0;
 
       currentTripStatus = status;
 
@@ -412,36 +390,34 @@ class _HomeState extends State<Home> {
           context: context,
           dialogType: DialogType.noHeader,
           animType: AnimType.rightSlide,
-
           dismissOnTouchOutside: true,
           headerAnimationLoop: false,
+          buttonsBorderRadius: BorderRadius.circular(25),
+          dialogBorderRadius: BorderRadius.circular(20),
 
           btnCancelText: "Reject",
-          btnCancelOnPress: () {
+          btnCancelOnPress: () async {
             tripPollingTimer?.cancel();
-            declineOffer();
+            await handleDeclineOffer();
           },
 
           btnOkText: "Accept",
-          btnOkOnPress: () {
+          btnOkOnPress: () async {
             tripPollingTimer?.cancel();
-            acceptOffer();
+            await handleAcceptOffer();
           },
 
-          buttonsBorderRadius: BorderRadius.circular(25),
           buttonsTextStyle: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
-
-          dialogBorderRadius: BorderRadius.circular(20),
 
           body: TripDialogBody(
             startStreetName: startStreetName ?? "Unknown Street name",
             destinationStreetName: destinationStreetName!,
             estimatedTime: estimatedTime,
             estimatedFare: estimatedFare,
-            declineOffer: declineOffer,
+            declineOffer: handleDeclineOffer,
           ),
         ).show();
       }
@@ -449,45 +425,36 @@ class _HomeState extends State<Home> {
   }
 
   // Decline Offer
-  Future<Map<String, dynamic>?> declineOffer() async {
-    try {
-      final response = await post(
-        Uri.parse(
-          "${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/decline",
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${accessToken}',
-        },
-      );
+  Future<Map<String, dynamic>?> handleDeclineOffer() async {
+    if (tripRequestId == null) return null;
 
-      return jsonDecode(response.body);
-    } catch (e) {
+    final result = await _tripApiService.declineOffer(tripRequestId!);
+
+    if (result != null && result["success"] == true) {
+      showSnackBar(context: context, message: "Offer Declined", isError: false);
+    } else {
       showSnackBar(context: context, message: "Network error");
-      return null;
     }
+
+    return result;
   }
 
   // Accept Offer
-  Future<Map<String, dynamic>?> acceptOffer() async {
+  Future<void> handleAcceptOffer() async {
+    if (tripRequestId == null) return;
+
     try {
-      final response = await post(
-        Uri.parse(
-          "${dotenv.env["API_BASE_URL"]}/trips/request/$tripRequestId/accept",
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${accessToken}',
-        },
-      );
+      final result = await _tripApiService.acceptOffer(tripRequestId!);
 
-      final result = jsonDecode(response.body);
+      if (result != null && result["success"] == true) {
+        final data = result["data"];
+        if (data != null && data["status"] == "ACCEPTED") {
+          if (!mounted) return;
 
-      if (result["success"]) {
-        if (result["data"]["status"] == "ACCEPTED") {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
+
           showSnackBar(
             context: context,
             message: "Your vehicle is on the way",
@@ -496,12 +463,14 @@ class _HomeState extends State<Home> {
         } else {
           showSnackBar(context: context, message: "Something went wrong");
         }
+      } else {
+        showSnackBar(context: context, message: "Network error");
       }
-
-      return result;
     } catch (e) {
-      showSnackBar(context: context, message: "Network error");
-      return null;
+      print("Error in handleAcceptOffer: $e");
+      if (mounted) {
+        showSnackBar(context: context, message: "Error accepting offer");
+      }
     }
   }
 
