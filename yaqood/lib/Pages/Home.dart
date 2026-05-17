@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:yaqood/Constants/constants.dart';
 import 'package:yaqood/Enums/ride_step.dart';
 import 'package:yaqood/Services/location_service.dart';
+import 'package:yaqood/Services/map_helper.dart';
 import 'package:yaqood/Services/map_routing_service.dart';
 import 'package:yaqood/Services/trip_api_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
@@ -194,31 +195,7 @@ class _HomeState extends State<Home> {
 
   // FocusOnRoute
   void focusOnRoute() async {
-    if (polylineCoordinates.isNotEmpty && mapController != null) {
-      double minLat = polylineCoordinates
-          .map((p) => p.latitude)
-          .reduce((a, b) => a < b ? a : b);
-
-      double maxLat = polylineCoordinates
-          .map((p) => p.latitude)
-          .reduce((a, b) => a > b ? a : b);
-
-      double minLng = polylineCoordinates
-          .map((p) => p.longitude)
-          .reduce((a, b) => a < b ? a : b);
-
-      double maxLng = polylineCoordinates
-          .map((p) => p.longitude)
-          .reduce((a, b) => a > b ? a : b);
-
-      LatLngBounds bounds = LatLngBounds(
-        southwest: LatLng(minLat, minLng),
-
-        northeast: LatLng(maxLat, maxLng),
-      );
-
-      mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
-    }
+    MapHelper.animateToRoute(mapController, polylineCoordinates);
 
     if (sheetController.isAttached && sheetSize > Constants.minSheetSize) {
       openSheet(Constants.minSheetSize);
@@ -348,12 +325,11 @@ class _HomeState extends State<Home> {
         return;
       }
 
-      // Safely cast estimatedTime and estimatedFare to double
-      final estimatedTime = estimatedTimeValue != null 
-          ? (estimatedTimeValue as num).toDouble() 
+      final estimatedTime = estimatedTimeValue != null
+          ? (estimatedTimeValue as num).toDouble()
           : 0.0;
-      final estimatedFare = estimatedFareValue != null 
-          ? (estimatedFareValue as num).toDouble() 
+      final estimatedFare = estimatedFareValue != null
+          ? (estimatedFareValue as num).toDouble()
           : 0.0;
 
       currentTripStatus = status;
