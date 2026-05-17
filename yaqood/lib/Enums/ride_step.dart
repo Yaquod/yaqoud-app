@@ -1,0 +1,1 @@
+enum RideStep {search, payment}

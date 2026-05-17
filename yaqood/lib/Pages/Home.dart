@@ -12,11 +12,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Constants/constants.dart';
+import 'package:yaqood/Enums/ride_step.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
+import 'package:yaqood/Widgets/location_search_widget.dart';
+import 'package:yaqood/Widgets/payment_widget.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, this.initialTripId});
@@ -60,11 +63,7 @@ class _HomeState extends State<Home> {
   FocusNode startFocusNode = FocusNode();
   FocusNode destinationFocusNode = FocusNode();
 
-  final _startConfig = GoogleApiConfig(
-    apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
-    fetchPlaceDetailsWithCoordinates: true,
-  );
-  final _destinationConfig = GoogleApiConfig(
+  GoogleApiConfig googleApiConfig = GoogleApiConfig(
     apiKey: dotenv.env["GOOGLE_MAPS_API_KEY"]!,
     fetchPlaceDetailsWithCoordinates: true,
   );
@@ -83,6 +82,8 @@ class _HomeState extends State<Home> {
   Timer? tripPollingTimer;
 
   int tripRequestId = 0;
+
+  RideStep currentStep = RideStep.search;
 
   // Location Permession
   Future<bool> checkLocationPermission() async {
@@ -218,6 +219,9 @@ class _HomeState extends State<Home> {
       routingPreference: RoutingPreference.trafficAware,
     );
 
+    print("*************** lat: ${start.latitude} *********************");
+    print("*************** long: ${start.longitude} *********************");
+
     RoutesApiResponse response = await polylinePoints
         .getRouteBetweenCoordinatesV2(request: request);
 
@@ -339,10 +343,6 @@ class _HomeState extends State<Home> {
           "endLat": destinationLocation?.latitude,
         }),
       );
-      print("========================================");
-      print("start lat: ${startLocation?.latitude}");
-      print("start long: ${startLocation?.longitude}");
-      print("========================================");
 
       return jsonDecode(response.body);
     } catch (e) {
@@ -562,6 +562,56 @@ class _HomeState extends State<Home> {
     }
   }
 
+  void _onStartLocationChanged(LatLng location, Prediction prediction) {
+    setState(() {
+      isSelectedFromSearch = true;
+      startLocation = location;
+      final streetName = prediction.description?.split('،')[0] ?? "";
+      startController.text = prediction.description!;
+      startStreetName = streetName;
+    });
+
+    if (startLocation != null && destinationLocation != null) {
+      _initializeTrip();
+    }
+  }
+
+  void _clearStartLocationSearch() {
+    setState(() {
+      startController.clear();
+      startLocation = null;
+      startStreetName = null;
+      clearRoute();
+    });
+  }
+
+  void _onDestinationChanged(LatLng location, Prediction prediction) {
+    setState(() {
+      isSelectedFromSearch = true;
+      destinationLocation = location;
+      destinationStreetName = prediction.description?.split('،')[0] ?? "";
+      destinationController.text = prediction.description!;
+    });
+
+    if (startLocation != null && destinationLocation != null) {
+      _initializeTrip();
+    }
+  }
+
+  void _clearDestinationLocationSearch() {
+    setState(() {
+      destinationController.clear();
+      destinationLocation = null;
+      destinationStreetName = null;
+      clearRoute();
+    });
+  }
+
+  void _initializeTrip() {
+    openSheet(Constants.minSheetSize);
+    createRoute(startLocation!, destinationLocation!);
+    startTripFlow();
+  }
 
   // init State
   @override
@@ -990,226 +1040,32 @@ class _HomeState extends State<Home> {
 
                           Gap(10),
 
-                          // start Location textField
-                          GooglePlacesAutoCompleteTextFormField(
-                            key: const ValueKey("startLocation"),
-                            config: _startConfig,
-                            textEditingController: startController,
-                            focusNode: startFocusNode,
-
-                            decoration: InputDecoration(
-                              labelText: "Pick up Location",
-                              focusColor: PrimaryColor,
-
-                              border: OutlineInputBorder(),
-
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: PrimaryColor,
-                                  width: 1,
-                                ),
-                              ),
-
-                              suffixIcon: startController.text.isNotEmpty
-                                  ? IconButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          startController.clear();
-                                          startLocation = null;
-                                          startStreetName = null;
-                                          clearRoute();
-                                        });
-                                      },
-                                      icon: Icon(
-                                        Icons.clear,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-
-                            maxLines: 1,
-                            minInputLength: 3,
-
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter some text';
-                              }
-
-                              return null;
-                            },
-
-                            overlayContainerBuilder: (child) => Material(
-                              elevation: 5,
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-
-                              child: child,
-                            ),
-
-                            onPredictionWithCoordinatesReceived:
-                                (Prediction prediction) {
-                                  if (prediction.lat == null ||
-                                      prediction.lng == null) {
-                                    return;
-                                  }
-
-                                  final LatLng selectedLocation = LatLng(
-                                    double.parse(prediction.lat!),
-                                    double.parse(prediction.lng!),
-                                  );
-
-                                  FocusScope.of(context).unfocus();
-
-                                  setState(() {
-                                    isSelectedFromSearch = true;
-                                    startLocation = selectedLocation;
-                                    startStreetName = prediction.description
-                                        ?.split('،')[0];
-                                    startController.text =
-                                        prediction.description!;
-
-                                    clearRoute();
-                                  });
-
-                                  mapController?.animateCamera(
-                                    CameraUpdate.newLatLngZoom(
-                                      selectedLocation,
-                                      16,
-                                    ),
-                                  );
-                                },
-
-                            onSuggestionClicked: (Prediction prediction) {
-                              startController.text = prediction.description!;
-
-                              if (startLocation != null &&
-                                  destinationLocation != null) {
-                                openSheet(Constants.minSheetSize);
-
-                                createRoute(
-                                  startLocation!,
-                                  destinationLocation!,
-                                );
-
-                                startTripFlow();
-                              }
-                            },
-                          ),
-
-                          Gap(20),
-
-                          // Destination Location textField
-                          GooglePlacesAutoCompleteTextFormField(
-                            key: const ValueKey("destinationKey"),
-                            config: _destinationConfig,
-                            textEditingController: destinationController,
-                            focusNode: destinationFocusNode,
-
-                            decoration: InputDecoration(
-                              labelText: "What is your Destination ?",
-                              focusColor: PrimaryColor,
-
-                              border: OutlineInputBorder(),
-
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: PrimaryColor,
-                                  width: 1,
-                                ),
-                              ),
-
-                              suffixIcon: destinationController.text.isNotEmpty
-                                  ? IconButton(
-                                      onPressed: () {
-                                        clearDestinaton();
-                                        setState(() {
-                                          clearRoute();
-                                        });
-                                        mapController?.animateCamera(
-                                          CameraUpdate.newLatLngZoom(
-                                            currentLocation!,
-                                            16,
-                                          ),
-                                        );
-                                      },
-                                      icon: Icon(
-                                        Icons.clear,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-
-                            maxLines: 1,
-                            minInputLength: 3,
-
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Choose your destination';
-                              }
-
-                              return null;
-                            },
-
-                            overlayContainerBuilder: (child) => Material(
-                              elevation: 5,
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-
-                              child: child,
-                            ),
-
-                            onPredictionWithCoordinatesReceived:
-                                (Prediction prediction) {
-                                  if (prediction.lat == null ||
-                                      prediction.lng == null) {
-                                    return;
-                                  }
-
-                                  final LatLng selectedLocation = LatLng(
-                                    double.parse(prediction.lat!),
-                                    double.parse(prediction.lng!),
-                                  );
-
-                                  FocusScope.of(context).unfocus();
-
-                                  setState(() {
-                                    isSelectedFromSearch = true;
-                                    destinationLocation = selectedLocation;
-                                    destinationStreetName = prediction
-                                        .description
-                                        ?.split('،')[0];
-                                    destinationController.text =
-                                        prediction.description!;
-
-                                    clearRoute();
-                                  });
-
-                                  if (startLocation != null &&
-                                      destinationLocation != null) {
-                                    openSheet(Constants.minSheetSize);
-
-                                    createRoute(
-                                      startLocation!,
-                                      destinationLocation!,
-                                    );
-
-                                    startTripFlow();
-                                  }
-                                },
-
-                            onSuggestionClicked: (Prediction prediction) {
-                              destinationController.text =
-                                  prediction.description!;
-                            },
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: currentStep == RideStep.search
+                                ? LocationSearch(
+                                    startController: startController,
+                                    destinationController:
+                                        destinationController,
+                                    startFocusNode: startFocusNode,
+                                    destinationFocusNode: destinationFocusNode,
+                                    mapController: mapController,
+                                    googleApiConfig: googleApiConfig,
+                                    onStartLocationChanged:
+                                        _onStartLocationChanged,
+                                    onDestinationChanged: _onDestinationChanged,
+                                    clearStartLocationSearch:
+                                        _clearStartLocationSearch,
+                                    clearDestinationLocationSearch:
+                                        _clearDestinationLocationSearch,
+                                  )
+                                : PaymentWidget(),
                           ),
                         ],
                       ),
                     );
                   },
                 ),
-
               ],
             ),
     );
