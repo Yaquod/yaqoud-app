@@ -80,7 +80,7 @@ class MapLocationButton extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
             onPressed: onPressed,
             child: Icon(
-              hasRoute ? Icons.arrow_forward : Icons.location_searching,
+              Icons.location_searching,
               size: 20,
               color: Colors.black,
             ),

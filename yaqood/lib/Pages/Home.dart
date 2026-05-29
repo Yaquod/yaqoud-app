@@ -20,6 +20,7 @@ import 'package:yaqood/Widgets/Map/map_info_window.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
+import 'package:yaqood/Widgets/confirm_trip_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
 
@@ -200,8 +201,12 @@ class _HomeState extends State<Home> {
   void focusOnRoute() async {
     MapHelper.animateToRoute(mapController, polylineCoordinates);
 
-    if (sheetController.isAttached && sheetSize > Constants.minSheetSize) {
-      openSheet(Constants.minSheetSize);
+    if (sheetController.isAttached) {
+      double targetSize = (currentStep == RideStep.confirmTrip)
+          ? 0.42
+          : Constants.minSheetSize;
+
+      openSheet(targetSize);
     }
   }
 
@@ -499,31 +504,30 @@ class _HomeState extends State<Home> {
   }
 
   void _initializeTrip() {
+    startFocusNode.unfocus();
+    destinationFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
+
     openSheet(Constants.minSheetSize);
     createRoute(startLocation!, destinationLocation!);
-    startTripFlow();
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      setState(() {
+        currentStep = RideStep.confirmTrip;
+      });
+
+      openSheet(0.42);
+    });
   }
 
   void _handleLocationGPSPressed() {
     if (currentLocation == null) return;
 
-    if (hasRoute) {
-      setState(() {
-        hasRoute = false;
-        startLocation = currentLocation;
-
-        polylineCoordinates.clear();
-        polylines.clear();
-        showInfoWindow = true;
-
-        destinationController.clear();
-        destinationLocation = null;
-        destinationStreetName = null;
-      });
-    }
 
     mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(currentLocation!, 16),
+      CameraUpdate.newLatLngZoom(startLocation!, 16),
     );
   }
 
@@ -755,27 +759,47 @@ class _HomeState extends State<Home> {
 
                           Gap(10),
 
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: currentStep == RideStep.search
-                                ? LocationSearch(
-                                    startController: startController,
-                                    destinationController:
-                                        destinationController,
-                                    startFocusNode: startFocusNode,
-                                    destinationFocusNode: destinationFocusNode,
-                                    mapController: mapController,
-                                    googleApiConfig: googleApiConfig,
-                                    onStartLocationChanged:
-                                        _onStartLocationChanged,
-                                    onDestinationChanged: _onDestinationChanged,
-                                    clearStartLocationSearch:
-                                        _clearStartLocationSearch,
-                                    clearDestinationLocationSearch:
-                                        _clearDestinationLocationSearch,
-                                  )
-                                : PaymentWidget(),
+                          Visibility(
+                            visible: currentStep == RideStep.search,
+                            maintainState: true,
+                            child: LocationSearch(
+                              startController: startController,
+                              destinationController: destinationController,
+                              startFocusNode: startFocusNode,
+                              destinationFocusNode: destinationFocusNode,
+                              mapController: mapController,
+                              googleApiConfig: googleApiConfig,
+                              onStartLocationChanged: _onStartLocationChanged,
+                              onDestinationChanged: _onDestinationChanged,
+                              clearStartLocationSearch:
+                                  _clearStartLocationSearch,
+                              clearDestinationLocationSearch:
+                                  _clearDestinationLocationSearch,
+                            ),
                           ),
+
+                          if (currentStep == RideStep.confirmTrip)
+                            ConfirmTripWidget(
+                              startStreetName:
+                                  startStreetName ?? "Current Location",
+                              destinationStreetName: destinationStreetName!,
+                              onRequestPressed: () async {
+                                await startTripFlow();
+                              },
+                              onCancelPressed: () {
+                                startFocusNode.unfocus();
+                                destinationFocusNode.unfocus();
+                                FocusManager.instance.primaryFocus?.unfocus();
+
+                                setState(() {
+                                  currentStep = RideStep.search;
+                                  clearRoute();
+                                });
+                              },
+                            ),
+
+                          if (currentStep == RideStep.payment)
+                            const PaymentWidget(),
                         ],
                       ),
                     );
