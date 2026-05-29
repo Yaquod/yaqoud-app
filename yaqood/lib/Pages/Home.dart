@@ -62,6 +62,8 @@ class _HomeState extends State<Home> {
   TextEditingController destinationController = TextEditingController();
 
   double sheetSize = 0.2;
+  double? tripDistance;
+  double? tripDuration;
 
   FocusNode startFocusNode = FocusNode();
   FocusNode destinationFocusNode = FocusNode();
@@ -184,6 +186,9 @@ class _HomeState extends State<Home> {
       setState(() {
         polylineCoordinates = points;
         polylines = computedPolylines;
+
+        tripDistance = (routeData['distance'] ?? 0) as double?;
+        tripDuration = (routeData['duration'] ?? 0) as double?;
       });
 
       if (polylineCoordinates.isNotEmpty) {
@@ -193,6 +198,8 @@ class _HomeState extends State<Home> {
       setState(() {
         hasRoute = false;
         showInfoWindow = true;
+        tripDistance = 0;
+        tripDuration = 0;
       });
     }
   }
@@ -217,6 +224,8 @@ class _HomeState extends State<Home> {
       showInfoWindow = true;
       polylineCoordinates.clear();
       polylines.clear();
+      tripDistance = 0;
+      tripDuration = 0;
     });
   }
 
@@ -838,7 +847,7 @@ class _HomeState extends State<Home> {
                                 });
 
                                 openSheet(Constants.maxSheetSize);
-                              },
+                              }, distance: tripDistance, duration: tripDuration,
                             ),
 
                           if (currentStep == RideStep.payment)

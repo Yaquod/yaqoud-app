@@ -14,6 +14,8 @@ class MapRoutingService {
   }) async {
     List<LatLng> coordinates = [];
     Set<Polyline> polylineSet = {};
+    double distance = 0;
+    double duration = 0;
 
     RoutesApiRequest request = RoutesApiRequest(
       origin: PointLatLng(start.latitude, start.longitude),
@@ -28,6 +30,10 @@ class MapRoutingService {
 
       if (response.routes.isNotEmpty) {
         final route = response.routes.first;
+
+        distance = route.distanceKm ?? 0;
+        duration = route.durationMinutes ?? 0;
+
         List<PointLatLng> points = route.polylinePoints ?? [];
 
         coordinates = points
@@ -36,15 +42,15 @@ class MapRoutingService {
       }
 
       if (coordinates.isNotEmpty) {
-          polylineSet.add(
-            Polyline(
-              polylineId: const PolylineId("route"),
-              points: coordinates,
-              width: 5,
-              color: Colors.blue,
-            ),
-          );
-        }
+        polylineSet.add(
+          Polyline(
+            polylineId: const PolylineId("route"),
+            points: coordinates,
+            width: 5,
+            color: Colors.blue,
+          ),
+        );
+      }
     } catch (e) {
       print("MapRoutingService Error: $e");
     }
@@ -52,6 +58,8 @@ class MapRoutingService {
     return {
       'coordinates': coordinates,
       'polylines': polylineSet,
+      'distance': distance,
+      'duration': duration,
     };
   }
 }
