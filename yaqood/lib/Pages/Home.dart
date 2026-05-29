@@ -79,7 +79,7 @@ class _HomeState extends State<Home> {
 
   Timer? tripPollingTimer;
 
-  RideStep currentStep = RideStep.search;
+  RideStep currentStep = RideStep.initial;
 
   final LocationService _locationService = LocationService();
   final MapRoutingService _mapRoutingService = MapRoutingService();
@@ -525,9 +525,8 @@ class _HomeState extends State<Home> {
   void _handleLocationGPSPressed() {
     if (currentLocation == null) return;
 
-
     mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(startLocation!, 16),
+      CameraUpdate.newLatLngZoom(startLocation ?? currentLocation!, 16),
     );
   }
 
@@ -760,22 +759,65 @@ class _HomeState extends State<Home> {
                           Gap(10),
 
                           Visibility(
-                            visible: currentStep == RideStep.search,
+                            visible: currentStep.index <= 1,
                             maintainState: true,
-                            child: LocationSearch(
-                              startController: startController,
-                              destinationController: destinationController,
-                              startFocusNode: startFocusNode,
-                              destinationFocusNode: destinationFocusNode,
-                              mapController: mapController,
-                              googleApiConfig: googleApiConfig,
-                              onStartLocationChanged: _onStartLocationChanged,
-                              onDestinationChanged: _onDestinationChanged,
-                              clearStartLocationSearch:
-                                  _clearStartLocationSearch,
-                              clearDestinationLocationSearch:
-                                  _clearDestinationLocationSearch,
-                            ),
+                            child: currentStep == RideStep.initial
+                                ? GestureDetector(
+                                    onTap: () {
+                                      FocusScope.of(context).unfocus();
+
+                                      setState(() {
+                                        currentStep = RideStep.search;
+                                      });
+                                      openSheet(Constants.maxSheetSize);
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 15,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.search,
+                                            color: PrimaryColor,
+                                          ),
+                                          const Gap(12),
+                                          const Text(
+                                            "Where to?",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : LocationSearch(
+                                    startController: startController,
+                                    destinationController:
+                                        destinationController,
+                                    startFocusNode: startFocusNode,
+                                    destinationFocusNode: destinationFocusNode,
+                                    mapController: mapController,
+                                    googleApiConfig: googleApiConfig,
+                                    onStartLocationChanged:
+                                        _onStartLocationChanged,
+                                    onDestinationChanged: _onDestinationChanged,
+                                    clearStartLocationSearch:
+                                        _clearStartLocationSearch,
+                                    clearDestinationLocationSearch:
+                                        _clearDestinationLocationSearch,
+                                  ),
                           ),
 
                           if (currentStep == RideStep.confirmTrip)
@@ -793,8 +835,9 @@ class _HomeState extends State<Home> {
 
                                 setState(() {
                                   currentStep = RideStep.search;
-                                  clearRoute();
                                 });
+
+                                openSheet(Constants.maxSheetSize);
                               },
                             ),
 

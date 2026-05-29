@@ -1,1 +1,1 @@
-enum RideStep { search, confirmTrip, payment }
+enum RideStep {initial, search, confirmTrip, payment }
