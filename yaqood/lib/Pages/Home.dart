@@ -22,6 +22,7 @@ import 'package:google_places_autocomplete_text_field/google_places_autocomplete
 import 'package:yaqood/Widgets/confirm_trip_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
+import 'package:yaqood/Widgets/searching_vehicle_widget.dart';
 import 'package:yaqood/Widgets/trip_offer_widget.dart';
 
 class Home extends StatefulWidget {
@@ -44,7 +45,6 @@ class _HomeState extends State<Home> {
   bool isSelectedFromSearch = false;
   bool showInfoWindow = true;
   bool hasRoute = false;
-  bool isTripDialogShown = false;
 
   LatLng? startLocation;
   LatLng? currentLocation;
@@ -278,41 +278,14 @@ class _HomeState extends State<Home> {
     }
 
     if (result["success"] == true && result["data"]["status"] == "PENDING") {
-      isTripDialogShown = true;
       tripRequestId = result["data"]["id"].toString();
 
-      AwesomeDialog(
-        context: context,
-        dialogType: DialogType.noHeader,
-        animType: AnimType.rightSlide,
-        dismissOnTouchOutside: false,
-        dismissOnBackKeyPress: false,
-
-        body: Column(
-          children: [
-            Gap(24),
-
-            Text(
-              "Finding a nearby Vehicle",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-
-            Gap(10),
-
-            Text(
-              "Locating the nearest autonomous taxi",
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-
-            Gap(40),
-            CircularProgressIndicator(color: PrimaryColor),
-
-            Gap(24),
-          ],
-        ),
-      ).show();
+      setState(() {
+        currentStep = RideStep.searchingVehicle;
+      });
 
       startTripPolling();
+      openSheet(Constants.searchingSheetSize);
     }
   }
 
@@ -366,27 +339,15 @@ class _HomeState extends State<Home> {
     if (status == "COMPLETED") {
       tripPollingTimer?.cancel();
 
-      if (isTripDialogShown) {
-        if (Navigator.canPop(context)) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
+      showSnackBar(context: context, message: "Vehicle Found", isError: false);
 
-        isTripDialogShown = false;
+      setState(() {
+        offerTime = estimatedTime;
+        offerFare = estimatedFare;
+        currentStep = RideStep.offer;
+      });
 
-        showSnackBar(
-          context: context,
-          message: "Vehicle Found",
-          isError: false,
-        );
-
-        setState(() {
-          offerTime = estimatedTime;
-          offerFare = estimatedFare;
-          currentStep = RideStep.offer;
-        });
-
-        openSheet(Constants.tripSummary);
-      }
+      openSheet(Constants.tripSummary);
     }
   }
 
@@ -839,6 +800,17 @@ class _HomeState extends State<Home> {
                               },
                               distance: tripDistance,
                               duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.searchingVehicle)
+                            SearchingVehicleWidget(
+                              onCancelSearch: () {
+                                tripPollingTimer?.cancel();
+                                setState(() {
+                                  currentStep = RideStep.confirmTrip;
+                                });
+                                openSheet(Constants.tripSummary);
+                              },
                             ),
 
                           if (currentStep == RideStep.offer)
