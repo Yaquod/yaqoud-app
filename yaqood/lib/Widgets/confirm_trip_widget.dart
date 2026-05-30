@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
+import 'package:yaqood/Widgets/trip_route_card.dart';
 
 class ConfirmTripWidget extends StatelessWidget {
   final String startStreetName;
@@ -26,77 +27,16 @@ class ConfirmTripWidget extends StatelessWidget {
       key: const ValueKey("ConfirmTripPanel"),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // const Text(
-        //   "Trip Summary",
-        //   style: TextStyle(
-        //     fontSize: 20,
-        //     fontWeight: FontWeight.bold,
-        //     color: Colors.black87,
-        //   ),
-        //   textAlign: TextAlign.center,
-        // ),
-        // const Gap(20),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Column(
-                  children: [
-                    Icon(
-                      Icons.person_pin_circle_outlined,
-                      color: Colors.green,
-                      size: 30,
-                    ),
+        Text(
+          "Trip Summary",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: PrimaryColor),textAlign: TextAlign.center,
+        ),
+        const Gap(12),
 
-                    Column(
-                      children: List.generate(
-                        3,
-                        (index) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Container(
-                            width: 1.2,
-                            height: 6,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
 
-                    Icon(Icons.location_pin, color: Colors.red, size: 30),
-                  ],
-                ),
-
-                SizedBox(width: 12),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        startStreetName,
-                        style: TextStyle(fontSize: 18),
-                      ),
-
-                      Divider(color: Colors.grey[400]),
-
-                      Text(
-                        destinationStreetName!,
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+        TripRouteCard(
+          startStreetName: startStreetName,
+          destinationStreetName: destinationStreetName!,
         ),
 
         const Gap(16),
@@ -105,74 +45,18 @@ class ConfirmTripWidget extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: PrimaryColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: PrimaryColor.withValues(alpha: 0.15),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.access_time_filled,
-                      color: PrimaryColor,
-                      size: 20,
-                    ),
-                    const Gap(8),
-                    Text(
-                      '${duration!.toStringAsFixed(2)} min',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
+              child: _buildInfoCard(
+                label: '${duration!.toStringAsFixed(0)} min',
+                icon: Icons.access_time_filled,
+                color: PrimaryColor,
               ),
             ),
-
-            const Gap(8),
-
+            const Gap(12),
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.directions_car_filled,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    const Gap(8),
-                    Text(
-                      '${distance!.toStringAsFixed(2)} km',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
+              child: _buildInfoCard(
+                label: '${distance!.toStringAsFixed(2)} km',
+                icon: Icons.directions_car_filled,
+                color: Colors.orange,
               ),
             ),
           ],
@@ -215,6 +99,36 @@ class ConfirmTripWidget extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha:0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha:0.15)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const Gap(8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

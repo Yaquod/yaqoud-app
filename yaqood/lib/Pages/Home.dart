@@ -19,10 +19,10 @@ import 'package:yaqood/Widgets/Map/map_center_pin.dart';
 import 'package:yaqood/Widgets/Map/map_info_window.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
-import 'package:yaqood/Widgets/Trip_Dialog_body.dart';
 import 'package:yaqood/Widgets/confirm_trip_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
+import 'package:yaqood/Widgets/trip_offer_widget.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, this.initialTripId});
@@ -64,6 +64,8 @@ class _HomeState extends State<Home> {
   double sheetSize = 0.2;
   double? tripDistance;
   double? tripDuration;
+  double? offerFare;
+  double? offerTime;
 
   FocusNode startFocusNode = FocusNode();
   FocusNode destinationFocusNode = FocusNode();
@@ -210,7 +212,7 @@ class _HomeState extends State<Home> {
 
     if (sheetController.isAttached) {
       double targetSize = (currentStep == RideStep.confirmTrip)
-          ? 0.42
+          ? Constants.tripSummary
           : Constants.minSheetSize;
 
       openSheet(targetSize);
@@ -331,12 +333,10 @@ class _HomeState extends State<Home> {
         return;
       }
 
-      // Safely extract values with null checks and type casting
       final status = data['status'] as String?;
       final estimatedTimeValue = data['estimatedTime'];
       final estimatedFareValue = data['estimatedFare'];
 
-      // Validate that status is not null
       if (status == null) {
         print("Warning: status is null, skipping this polling tick");
         return;
@@ -379,40 +379,13 @@ class _HomeState extends State<Home> {
           isError: false,
         );
 
-        AwesomeDialog(
-          context: context,
-          dialogType: DialogType.noHeader,
-          animType: AnimType.rightSlide,
-          dismissOnTouchOutside: true,
-          headerAnimationLoop: false,
-          buttonsBorderRadius: BorderRadius.circular(25),
-          dialogBorderRadius: BorderRadius.circular(20),
+        setState(() {
+          offerTime = estimatedTime;
+          offerFare = estimatedFare;
+          currentStep = RideStep.offer;
+        });
 
-          btnCancelText: "Reject",
-          btnCancelOnPress: () async {
-            tripPollingTimer?.cancel();
-            await handleDeclineOffer();
-          },
-
-          btnOkText: "Accept",
-          btnOkOnPress: () async {
-            tripPollingTimer?.cancel();
-            await handleAcceptOffer();
-          },
-
-          buttonsTextStyle: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-
-          body: TripDialogBody(
-            startStreetName: startStreetName ?? "Unknown Street name",
-            destinationStreetName: destinationStreetName!,
-            estimatedTime: estimatedTime,
-            estimatedFare: estimatedFare,
-            declineOffer: handleDeclineOffer,
-          ),
-        ).show();
+        openSheet(Constants.tripSummary);
       }
     }
   }
@@ -424,7 +397,14 @@ class _HomeState extends State<Home> {
     final result = await _tripApiService.declineOffer(tripRequestId!);
 
     if (result != null && result["success"] == true) {
-      showSnackBar(context: context, message: "Offer Declined", isError: false);
+      showSnackBar(context: context, message: "Offer Declined", isError: true);
+
+      if (mounted) {
+        setState(() {
+          currentStep = RideStep.confirmTrip;
+        });
+        openSheet(Constants.tripSummary);
+      }
     } else {
       showSnackBar(context: context, message: "Network error");
     }
@@ -444,15 +424,16 @@ class _HomeState extends State<Home> {
         if (data != null && data["status"] == "ACCEPTED") {
           if (!mounted) return;
 
-          if (Navigator.canPop(context)) {
-            Navigator.of(context, rootNavigator: true).pop();
-          }
-
           showSnackBar(
             context: context,
             message: "Your vehicle is on the way",
             isError: false,
           );
+
+          setState(() {
+            currentStep = RideStep.payment;
+          });
+          openSheet(Constants.minSheetSize);
         } else {
           showSnackBar(context: context, message: "Something went wrong");
         }
@@ -527,7 +508,7 @@ class _HomeState extends State<Home> {
         currentStep = RideStep.confirmTrip;
       });
 
-      openSheet(0.42);
+      openSheet(Constants.tripSummary);
     });
   }
 
@@ -709,7 +690,12 @@ class _HomeState extends State<Home> {
                   isMapMoving: isMapMoving,
                   sheetSize: sheetSize,
                   showInfoWindow: showInfoWindow,
-                  onTap: () => openSheet(Constants.maxSheetSize),
+                  onTap: () {
+                    setState(() {
+                      currentStep = RideStep.search;
+                    });
+                    openSheet(Constants.maxSheetSize);
+                  },
                 ),
 
                 MapDrawerButton(
@@ -847,7 +833,21 @@ class _HomeState extends State<Home> {
                                 });
 
                                 openSheet(Constants.maxSheetSize);
-                              }, distance: tripDistance, duration: tripDuration,
+                              },
+                              distance: tripDistance,
+                              duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.offer)
+                            TripOfferWidget(
+                              startStreetName:
+                                  startStreetName ?? "Current Location",
+                              destinationStreetName: destinationStreetName!,
+                              estimatedTime: offerTime ?? 0,
+                              estimatedFare: offerFare ?? 0,
+                              distance: tripDistance ?? 0,
+                              acceptOffer: handleAcceptOffer,
+                              declineOffer: handleDeclineOffer,
                             ),
 
                           if (currentStep == RideStep.payment)
