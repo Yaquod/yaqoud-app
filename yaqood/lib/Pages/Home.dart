@@ -516,7 +516,10 @@ class _HomeState extends State<Home> {
     if (currentLocation == null) return;
 
     mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(startLocation ?? currentLocation!, 16),
+      CameraUpdate.newLatLngZoom(
+        hasRoute ? startLocation! : currentLocation!,
+        16,
+      ),
     );
   }
 
