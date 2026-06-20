@@ -95,23 +95,12 @@ class _PaymobWebViewState extends State<PaymobWebView> {
                 "*************** Patment done & Redirercting *************",
               );
 
-              List<SavedCard>? cards = await getSavedCards();
-
-              if (cards != null && cards.isNotEmpty) {
-                print("Card Saved Successfully!");
-                for (var card in cards) {
-                  print("Card ID: ${card.id}");
-                  print("Card Masked PAN: ${card.maskedPan}");
-                }
-
-                if (mounted) {
-                  Navigator.pop(context, cards);
-                }
-              } else {
-                print("No cards found or error occurred");
-                if (mounted) Navigator.pop(context, null);
+              if (mounted) {
+                Navigator.pop(
+                  context,
+                  true,
+                ); 
               }
-
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;

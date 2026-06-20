@@ -339,8 +339,6 @@ class _HomeState extends State<Home> {
     if (status == "COMPLETED") {
       tripPollingTimer?.cancel();
 
-      showSnackBar(context: context, message: "Vehicle Found", isError: false);
-
       setState(() {
         offerTime = estimatedTime;
         offerFare = estimatedFare;
@@ -387,13 +385,13 @@ class _HomeState extends State<Home> {
 
           showSnackBar(
             context: context,
-            message: "Your vehicle is on the way",
+            message: "Your vehicle is on the way and paid successfully!",
             isError: false,
           );
 
-          setState(() {
-            currentStep = RideStep.payment;
-          });
+          // setState(() {
+          //   currentStep = RideStep.payment;
+          // });
           openSheet(Constants.minSheetSize);
         } else {
           showSnackBar(context: context, message: "Something went wrong");
@@ -606,6 +604,14 @@ class _HomeState extends State<Home> {
                     onCameraIdle: () async {
                       if (!mounted || lastCameraPosition == null) return;
 
+                      if (currentStep == RideStep.searchingVehicle ||
+                          currentStep == RideStep.offer) {
+                        setState(() {
+                          isMapMoving = false;
+                        });
+                        return;
+                      }
+
                       if (isSelectedFromSearch) {
                         setState(() {
                           isSelectedFromSearch = false;
@@ -787,7 +793,7 @@ class _HomeState extends State<Home> {
                               onRequestPressed: () async {
                                 await startTripFlow();
                               },
-                              onCancelPressed: () {
+                              onEditPressed: () {
                                 startFocusNode.unfocus();
                                 destinationFocusNode.unfocus();
                                 FocusManager.instance.primaryFocus?.unfocus();
@@ -821,12 +827,23 @@ class _HomeState extends State<Home> {
                               estimatedTime: offerTime ?? 0,
                               estimatedFare: offerFare ?? 0,
                               distance: tripDistance ?? 0,
-                              acceptOffer: handleAcceptOffer,
+                              acceptOffer: () async {
+                                setState(() {
+                                  currentStep = RideStep.payment;
+                                });
+                                openSheet(Constants.maxSheetSize);
+                              },
                               declineOffer: handleDeclineOffer,
                             ),
 
                           if (currentStep == RideStep.payment)
-                            const PaymentWidget(),
+                            PaymentWidget(
+                              estimatedFare: offerFare ?? 0.0,
+                              onPaymentSuccess: () async{
+                                await handleAcceptOffer();
+                                openSheet(Constants.minSheetSize);
+                              },
+                            ),
                         ],
                       ),
                     );

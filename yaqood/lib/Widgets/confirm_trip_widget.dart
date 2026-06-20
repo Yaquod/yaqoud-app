@@ -9,14 +9,14 @@ class ConfirmTripWidget extends StatelessWidget {
   final double? distance;
   final double? duration;
   final VoidCallback onRequestPressed;
-  final VoidCallback onCancelPressed;
+  final VoidCallback onEditPressed;
 
   const ConfirmTripWidget({
     super.key,
     required this.startStreetName,
     required this.destinationStreetName,
     required this.onRequestPressed,
-    required this.onCancelPressed,
+    required this.onEditPressed,
     required this.distance,
     required this.duration,
   });
@@ -46,7 +46,7 @@ class ConfirmTripWidget extends StatelessWidget {
           children: [
             Expanded(
               child: _buildInfoCard(
-                label: '${duration!.toStringAsFixed(0)} min',
+                label: '${(duration ?? 0).toStringAsFixed(0)} min',
                 icon: Icons.access_time_filled,
                 color: PrimaryColor,
               ),
@@ -54,7 +54,7 @@ class ConfirmTripWidget extends StatelessWidget {
             const Gap(12),
             Expanded(
               child: _buildInfoCard(
-                label: '${distance!.toStringAsFixed(2)} km',
+                label: '${(distance ?? 0).toStringAsFixed(2)} km',
                 icon: Icons.directions_car_filled,
                 color: Colors.orange,
               ),
@@ -88,7 +88,7 @@ class ConfirmTripWidget extends StatelessWidget {
         const Gap(8),
 
         TextButton(
-          onPressed: onCancelPressed,
+          onPressed: onEditPressed,
           child: const Text(
             "Edit Route",
             style: TextStyle(

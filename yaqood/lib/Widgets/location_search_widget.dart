@@ -95,9 +95,6 @@ class LocationSearch extends StatelessWidget {
 
             onStartLocationChanged(selectedLocation, prediction);
 
-            mapController?.animateCamera(
-              CameraUpdate.newLatLngZoom(selectedLocation, 16),
-            );
           },
         ),
 
