@@ -45,10 +45,12 @@ class _HomeState extends State<Home> {
   bool isSelectedFromSearch = false;
   bool showInfoWindow = true;
   bool hasRoute = false;
+  bool isFirstVehicleLocationLoaded = false;
 
   LatLng? startLocation;
   LatLng? currentLocation;
   LatLng? destinationLocation;
+  LatLng? vehicleLiveLocation;
 
   String? startStreetName;
   String? destinationStreetName;
@@ -57,6 +59,7 @@ class _HomeState extends State<Home> {
 
   CameraPosition? lastCameraPosition;
   StreamSubscription<Position>? positionStream;
+  StreamSubscription<Map<String, dynamic>>? sseTripSubscription;
 
   TextEditingController startController = TextEditingController();
   TextEditingController destinationController = TextEditingController();
@@ -155,6 +158,20 @@ class _HomeState extends State<Home> {
           markerId: MarkerId("end"),
           position: destinationLocation!,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    if (vehicleLiveLocation != null) {
+      markersSet.add(
+        Marker(
+          markerId: const MarkerId("yaqood_car_live"),
+          position: vehicleLiveLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+          infoWindow: const InfoWindow(
+            title: "Yaqood Autonomous Vehicle",
+            snippet: "Live Tracking",
+          ),
         ),
       );
     }
@@ -413,8 +430,8 @@ class _HomeState extends State<Home> {
   }
 
   // Accept Offer
-  Future<void> handleAcceptOffer() async {
-    if (tripRequestId == null) return;
+  Future<bool> handleAcceptOffer() async {
+    if (tripRequestId == null) return false;
 
     try {
       final result = await _tripApiService.acceptOffer(tripRequestId!);
@@ -422,7 +439,7 @@ class _HomeState extends State<Home> {
       if (result != null && result["success"] == true) {
         final data = result["data"];
         if (data != null && data["status"] == "ACCEPTED") {
-          if (!mounted) return;
+          if (!mounted) return false;
 
           showSnackBar(
             context: context,
@@ -431,6 +448,7 @@ class _HomeState extends State<Home> {
           );
 
           openSheet(Constants.minSheetSize);
+          return true;
         } else {
           showSnackBar(context: context, message: "Something went wrong");
         }
@@ -443,6 +461,7 @@ class _HomeState extends State<Home> {
         showSnackBar(context: context, message: "Error accepting offer");
       }
     }
+    return false;
   }
 
   void _onStartLocationChanged(LatLng location, Prediction prediction) {
@@ -520,6 +539,69 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // listen To Trip Updates
+  void listenToTripUpdates() {
+    sseTripSubscription?.cancel();
+    isFirstVehicleLocationLoaded = false;
+
+    if (tripRequestId == null) {
+      return;
+    }
+
+
+    sseTripSubscription = _tripApiService
+        .streamTripLiveUpdates(tripRequestId!)
+        .listen(
+          (payload) {
+            if (!mounted) return;
+
+            final double? lat = payload['lat'] != null
+                ? (payload['lat'] as num).toDouble()
+                : null;
+            final double? lng = payload['lon'] != null
+                ? (payload['lon'] as num).toDouble()
+                : null;
+
+
+            if (lat != null && lng != null) {
+              LatLng newVehicleLocation = LatLng(lat, lng);
+
+              setState(() {
+                vehicleLiveLocation = newVehicleLocation;
+              });
+
+              if (!isFirstVehicleLocationLoaded) {
+                isFirstVehicleLocationLoaded = true;
+
+
+                if (currentStep == RideStep.pickingUp &&
+                    startLocation != null) {
+
+                  createRoute(newVehicleLocation, startLocation!);
+                } else if (currentStep == RideStep.enRoute &&
+                    destinationLocation != null) {
+
+                  createRoute(newVehicleLocation, destinationLocation!);
+                }
+
+                mapController?.animateCamera(
+                  CameraUpdate.newLatLngZoom(newVehicleLocation, 16),
+                );
+              } else {
+                if (!isMapMoving) {
+                  mapController?.animateCamera(
+                    CameraUpdate.newLatLng(newVehicleLocation),
+                  );
+                }
+              }
+            }
+          },
+          onError: (error) {
+            print("SSE Error in Home: $error");
+          },
+        );
+  }
+
   // init State
   @override
   void initState() {
@@ -589,6 +671,8 @@ class _HomeState extends State<Home> {
     positionStream?.cancel();
 
     tripPollingTimer?.cancel();
+
+    sseTripSubscription?.cancel();
 
     super.dispose();
   }
@@ -874,10 +958,50 @@ class _HomeState extends State<Home> {
                             PaymentWidget(
                               estimatedFare: offerFare ?? 0.0,
                               onPaymentSuccess: () async {
-                                await handleAcceptOffer();
-                                openSheet(Constants.minSheetSize);
-                              }, tripRequestId: tripRequestId!,
+
+                                bool isTripActivated =
+                                    await handleAcceptOffer();
+
+                                if (isTripActivated && mounted) {
+                                  setState(() {
+                                    currentStep = RideStep.pickingUp;
+                                  });
+
+                                  openSheet(Constants.minSheetSize);
+
+                                  listenToTripUpdates();
+                                } 
+                              },
+                              tripRequestId: tripRequestId!,
                             ),
+
+                          if (currentStep == RideStep.pickingUp)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 25.0,
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      color: PrimaryColor,
+                                    ),
+                                    const Gap(15),
+                                    Text(
+                                      "Yaqood Taxi is driving to your pickup location...",
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          
                         ],
                       ),
                     );

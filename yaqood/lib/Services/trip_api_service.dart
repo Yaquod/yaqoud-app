@@ -73,14 +73,10 @@ class TripApiService {
 
   Future<bool> cancelTripRequest(String tripRequestId) async {
     try {
-
       final url = Uri.parse('$baseUrl/trips/request/$tripRequestId');
       final headers = await _getHeaders();
 
-      final response = await http.delete(
-        url,
-        headers: headers,
-      );
+      final response = await http.delete(url, headers: headers);
 
       if (response.body.isEmpty) {
         return response.statusCode == 200;
@@ -124,6 +120,46 @@ class TripApiService {
     } catch (e) {
       print("TripApiService - declineOffer Error: $e");
       return {"error_type": "network_error"};
+    }
+  }
+
+  Stream<Map<String, dynamic>> streamTripLiveUpdates(
+    String tripRequestId,
+  ) async* {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('accessToken');
+
+    final url = Uri.parse("$baseUrl/trips/$tripRequestId/location/stream");
+
+    final request = http.Request("GET", url);
+    request.headers['Accept'] = '*/*';
+    request.headers['Cache-Control'] = 'no-cache';
+    request.headers['Connection'] = 'keep-alive';
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Content-Type'] = 'application/json';
+
+    try {
+      final response = await request.send();
+
+      final stream = response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in stream) {
+        if (line.startsWith('data:')) {
+          final dataString = line.substring(5).trim();
+
+          if (dataString.isNotEmpty) {
+            try {
+              final decoded = jsonDecode(dataString) as Map<String, dynamic>;
+
+              yield decoded;
+            } catch (jsonError) {}
+          }
+        }
+      }
+    } catch (e) {
+      print("SSE Stream Error: $e");
     }
   }
 }
