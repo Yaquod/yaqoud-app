@@ -67,9 +67,34 @@ class TripApiService {
       return jsonDecode(response.body);
     } catch (e) {
       print("TripApiService - getTripStatus Error: $e");
-      // return {"error_type": "network_error"}; 
     }
     return null;
+  }
+
+  Future<bool> cancelTripRequest(String tripRequestId) async {
+    try {
+
+      final url = Uri.parse('$baseUrl/trips/request/$tripRequestId');
+      final headers = await _getHeaders();
+
+      final response = await http.delete(
+        url,
+        headers: headers,
+      );
+
+      if (response.body.isEmpty) {
+        return response.statusCode == 200;
+      }
+
+      final result = jsonDecode(response.body);
+      if (response.statusCode == 200 && result["success"] == true) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print("Error cancelling trip: $e");
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>?> acceptOffer(String tripRequestId) async {

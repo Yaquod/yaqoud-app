@@ -349,6 +349,47 @@ class _HomeState extends State<Home> {
     }
   }
 
+  // cancel trip request
+  Future<void> handleCancelTrip() async {
+    if (tripRequestId == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
+    );
+
+    bool isCancelled = await _tripApiService.cancelTripRequest(tripRequestId!);
+
+    if (mounted) Navigator.pop(context);
+
+    if (isCancelled) {
+      tripPollingTimer?.cancel();
+
+      if (mounted) {
+        setState(() {
+          currentStep = RideStep.confirmTrip;
+        });
+        openSheet(Constants.tripSummary);
+
+        showSnackBar(
+          context: context,
+          message: "Trip request cancelled successfully",
+          isError: false,
+        );
+      }
+    } else {
+      if (mounted) {
+        showSnackBar(
+          context: context,
+          message: "Failed to cancel trip. Please try again.",
+          isError: true,
+        );
+      }
+    }
+  }
+
   // Decline Offer
   Future<Map<String, dynamic>?> handleDeclineOffer() async {
     if (tripRequestId == null) return null;
@@ -389,9 +430,6 @@ class _HomeState extends State<Home> {
             isError: false,
           );
 
-          // setState(() {
-          //   currentStep = RideStep.payment;
-          // });
           openSheet(Constants.minSheetSize);
         } else {
           showSnackBar(context: context, message: "Something went wrong");
@@ -810,12 +848,8 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.searchingVehicle)
                             SearchingVehicleWidget(
-                              onCancelSearch: () {
-                                tripPollingTimer?.cancel();
-                                setState(() {
-                                  currentStep = RideStep.confirmTrip;
-                                });
-                                openSheet(Constants.tripSummary);
+                              onCancelSearch: () async {
+                                await handleCancelTrip();
                               },
                             ),
 
@@ -839,7 +873,7 @@ class _HomeState extends State<Home> {
                           if (currentStep == RideStep.payment)
                             PaymentWidget(
                               estimatedFare: offerFare ?? 0.0,
-                              onPaymentSuccess: () async{
+                              onPaymentSuccess: () async {
                                 await handleAcceptOffer();
                                 openSheet(Constants.minSheetSize);
                               },
