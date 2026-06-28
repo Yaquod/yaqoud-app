@@ -58,14 +58,15 @@ class PaymentService {
     }
   }
 
-  Future<bool> payWithSavedCard({required int cardId, required double amount}) async {
+  Future<bool> payWithSavedCard({required int cardId, required double amount, required String tripRequestId}) async {
     try {
       final response = await post(
         Uri.parse("$baseUrl/payments/mit"), 
         headers: await _getHeaders(),
         body: jsonEncode({
           "amount": amount,
-          "savedCardId": cardId
+          "savedCardId": cardId,
+          "requestId":tripRequestId
         }),
       );
 

@@ -876,7 +876,7 @@ class _HomeState extends State<Home> {
                               onPaymentSuccess: () async {
                                 await handleAcceptOffer();
                                 openSheet(Constants.minSheetSize);
-                              },
+                              }, tripRequestId: tripRequestId!,
                             ),
                         ],
                       ),

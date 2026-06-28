@@ -10,9 +10,10 @@ class PaymentWidget extends StatefulWidget {
   const PaymentWidget({
     super.key,
     required this.estimatedFare,
-    required this.onPaymentSuccess, 
+    required this.onPaymentSuccess, required this.tripRequestId, 
   });
-
+  
+  final String tripRequestId;
   final double estimatedFare;
   final VoidCallback onPaymentSuccess;
 
@@ -80,7 +81,7 @@ class _PaymentWidgetState extends State<PaymentWidget> {
     try {
       bool isPaid = await _paymentService.payWithSavedCard(
         cardId: _selectedCard!.id,
-        amount: widget.estimatedFare,
+        amount: widget.estimatedFare, tripRequestId: widget.tripRequestId,
       );
 
       if (isPaid && mounted) {
