@@ -22,6 +22,7 @@ import 'package:google_places_autocomplete_text_field/google_places_autocomplete
 import 'package:yaqood/Widgets/confirm_trip_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
+import 'package:yaqood/Widgets/picking_up_widget.dart';
 import 'package:yaqood/Widgets/searching_vehicle_widget.dart';
 import 'package:yaqood/Widgets/trip_offer_widget.dart';
 
@@ -69,6 +70,7 @@ class _HomeState extends State<Home> {
   double? tripDuration;
   double? offerFare;
   double? offerTime;
+  double vehicleBearing = 0.0;
 
   FocusNode startFocusNode = FocusNode();
   FocusNode destinationFocusNode = FocusNode();
@@ -91,6 +93,8 @@ class _HomeState extends State<Home> {
   final LocationService _locationService = LocationService();
   final MapRoutingService _mapRoutingService = MapRoutingService();
   final TripApiService _tripApiService = TripApiService();
+
+  BitmapDescriptor? carMarkerIcon;
 
   // assign start Location to it`s textField
   void updatesStartFieldWithStartLocation() async {
@@ -167,7 +171,12 @@ class _HomeState extends State<Home> {
         Marker(
           markerId: const MarkerId("yaqood_car_live"),
           position: vehicleLiveLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+          icon:
+              carMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+          rotation: vehicleBearing,
+          flat: true,
+          anchor: Offset(0.5, 0.5),
           infoWindow: const InfoWindow(
             title: "Yaqood Autonomous Vehicle",
             snippet: "Live Tracking",
@@ -228,7 +237,10 @@ class _HomeState extends State<Home> {
     MapHelper.animateToRoute(mapController, polylineCoordinates);
 
     if (sheetController.isAttached) {
-      double targetSize = (currentStep == RideStep.confirmTrip)
+      double targetSize =
+          (currentStep == RideStep.pickingUp || currentStep == RideStep.enRoute)
+          ? Constants.pickingUpSize
+          : currentStep == RideStep.confirmTrip
           ? Constants.tripSummary
           : Constants.minSheetSize;
 
@@ -544,10 +556,7 @@ class _HomeState extends State<Home> {
     sseTripSubscription?.cancel();
     isFirstVehicleLocationLoaded = false;
 
-    if (tripRequestId == null) {
-      return;
-    }
-
+    if (tripRequestId == null) return;
 
     sseTripSubscription = _tripApiService
         .streamTripLiveUpdates(tripRequestId!)
@@ -562,27 +571,33 @@ class _HomeState extends State<Home> {
                 ? (payload['lon'] as num).toDouble()
                 : null;
 
-
             if (lat != null && lng != null) {
               LatLng newVehicleLocation = LatLng(lat, lng);
 
               setState(() {
+                if (vehicleLiveLocation != null) {
+                  vehicleBearing = Geolocator.bearingBetween(
+                    vehicleLiveLocation!.latitude,
+                    vehicleLiveLocation!.longitude,
+                    newVehicleLocation.latitude,
+                    newVehicleLocation.longitude,
+                  );
+                }
+
                 vehicleLiveLocation = newVehicleLocation;
               });
+
+              if (currentStep == RideStep.pickingUp && startLocation != null) {
+                createRoute(newVehicleLocation, startLocation!);
+              } else if (currentStep == RideStep.enRoute &&
+                  destinationLocation != null) {
+                createRoute(newVehicleLocation, destinationLocation!);
+              }
 
               if (!isFirstVehicleLocationLoaded) {
                 isFirstVehicleLocationLoaded = true;
 
-
-                if (currentStep == RideStep.pickingUp &&
-                    startLocation != null) {
-
-                  createRoute(newVehicleLocation, startLocation!);
-                } else if (currentStep == RideStep.enRoute &&
-                    destinationLocation != null) {
-
-                  createRoute(newVehicleLocation, destinationLocation!);
-                }
+                openSheet(Constants.pickingUpSize);
 
                 mapController?.animateCamera(
                   CameraUpdate.newLatLngZoom(newVehicleLocation, 16),
@@ -602,10 +617,37 @@ class _HomeState extends State<Home> {
         );
   }
 
+  void _loadCustomMarker() async {
+    carMarkerIcon = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(48, 48)),
+      'assets/images/autonomous-car.png',
+    );
+    if (mounted) setState(() {});
+  }
+
+  Set<Circle> getCircles() {
+    Set<Circle> circlesSet = {};
+    if (startLocation != null && currentStep == RideStep.pickingUp) {
+      circlesSet.add(
+        Circle(
+          circleId: const CircleId("pickup_ripple"),
+          center: startLocation!,
+          radius: 40,
+          fillColor: PrimaryColor.withValues(alpha: 0.15),
+          strokeColor: PrimaryColor.withValues(alpha: 0.4),
+          strokeWidth: 2,
+        ),
+      );
+    }
+    return circlesSet;
+  }
+
   // init State
   @override
   void initState() {
     super.initState();
+    _loadCustomMarker();
+
     currentLocationStream();
 
     sheetController.addListener(() {
@@ -696,6 +738,8 @@ class _HomeState extends State<Home> {
 
                     polylines: polylines,
 
+                    circles: getCircles(),
+
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
@@ -717,7 +761,11 @@ class _HomeState extends State<Home> {
 
                         if (isFirstTime) {
                           isFirstTime = false;
-                        } else {
+                        } else if (currentStep != RideStep.pickingUp &&
+                            currentStep != RideStep.enRoute &&
+                            currentStep != RideStep.searchingVehicle &&
+                            currentStep != RideStep.payment &&
+                            currentStep != RideStep.offer) {
                           openSheet(Constants.minSheetSize);
                         }
                       }
@@ -958,7 +1006,6 @@ class _HomeState extends State<Home> {
                             PaymentWidget(
                               estimatedFare: offerFare ?? 0.0,
                               onPaymentSuccess: () async {
-
                                 bool isTripActivated =
                                     await handleAcceptOffer();
 
@@ -970,38 +1017,18 @@ class _HomeState extends State<Home> {
                                   openSheet(Constants.minSheetSize);
 
                                   listenToTripUpdates();
-                                } 
+                                }
                               },
                               tripRequestId: tripRequestId!,
                             ),
 
                           if (currentStep == RideStep.pickingUp)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 25.0,
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircularProgressIndicator(
-                                      color: PrimaryColor,
-                                    ),
-                                    const Gap(15),
-                                    Text(
-                                      "Yaqood Taxi is driving to your pickup location...",
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            PickingUpWidget(
+                              startStreetName:
+                                  startStreetName ?? "Current Location",
+                              distance: tripDistance,
+                              duration: tripDuration,
                             ),
-
-                          
                         ],
                       ),
                     );

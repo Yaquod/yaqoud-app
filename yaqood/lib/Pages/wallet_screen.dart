@@ -82,7 +82,7 @@ class _WalletScreenState extends State<WalletScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          "Are you sure you want to remove the card ending in ${card.maskedPan.substring(card.maskedPan.length - 4)}?",
+          "Are you sure you want to remove the card ending with ${card.maskedPan.substring(card.maskedPan.length - 4)}?",
         ),
         actions: [
           TextButton(
