@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:lottie/lottie.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 class EnRouteWidget extends StatelessWidget {
@@ -30,7 +31,15 @@ class EnRouteWidget extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         
-        const Gap(20),
+        Lottie.asset(
+          'assets/animations/vehicle.json',
+          height: 90,
+          fit: BoxFit.contain,
+          repeat: true, 
+          animate: true,
+        ),
+        
+        const Gap(10),
 
         Row(
           children: [

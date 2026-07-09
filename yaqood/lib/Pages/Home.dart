@@ -49,7 +49,6 @@ class _HomeState extends State<Home> {
   bool showInfoWindow = true;
   bool hasRoute = false;
   bool isFirstVehicleLocationLoaded = false;
-  bool _routeFocused = false;
 
   LatLng? startLocation;
   LatLng? currentLocation;
@@ -199,7 +198,7 @@ class _HomeState extends State<Home> {
       );
     }
 
-    if (vehicleLiveLocation != null) {
+    if (vehicleLiveLocation != null && currentStep == RideStep.pickingUp) {
       markersSet.add(
         Marker(
           markerId: const MarkerId("yaqood_car_live"),
@@ -221,53 +220,6 @@ class _HomeState extends State<Home> {
     return markersSet;
   }
 
-  // // Create route between start and destinatin locations and mange zooming
-  // void createRoute(LatLng start, LatLng destination) async {
-  //   setState(() {
-  //     showInfoWindow = false;
-  //     hasRoute = true;
-  //   });
-
-  //   polylineCoordinates.clear();
-  //   polylines.clear();
-
-  //   print("*************** lat: ${start.latitude} *********************");
-  //   print("*************** long: ${start.longitude} *********************");
-
-  //   final routeData = await _mapRoutingService.getRouteData(
-  //     start: start,
-  //     destination: destination,
-  //   );
-
-  //   List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
-  //   Set<Polyline> computedPolylines = (routeData['polylines'] as Set)
-  //       .cast<Polyline>();
-
-  //   if (points.isNotEmpty) {
-  //     setState(() {
-  //       polylineCoordinates = points;
-  //       polylines = computedPolylines;
-
-  //       tripDistance = (routeData['distance'] ?? 0) as double?;
-  //       tripDuration = (routeData['duration'] ?? 0) as double?;
-  //     });
-
-  //     if (polylineCoordinates.isNotEmpty) {
-  //       if (!_routeFocused) {
-  //         _routeFocused = true;
-  //         focusOnRoute();
-  //       }
-  //     }
-  //   } else {
-  //     setState(() {
-  //       hasRoute = false;
-  //       showInfoWindow = true;
-  //       tripDistance = 0;
-  //       tripDuration = 0;
-  //     });
-  //   }
-  // }
-
   // Update Route
   Future<void> updateRoute(
     LatLng start,
@@ -280,36 +232,32 @@ class _HomeState extends State<Home> {
       hasRoute = true;
     });
 
-    polylineCoordinates.clear();
-    polylines.clear();
+    try {
+      final routeData = await _mapRoutingService.getRouteData(
+        start: start,
+        destination: destination,
+      );
 
-    final routeData = await _mapRoutingService.getRouteData(
-      start: start,
-      destination: destination,
-    );
+      List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
+      Set<Polyline> computedPolylines = (routeData['polylines'] as Set)
+          .cast<Polyline>();
 
-    List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
-    Set<Polyline> computedPolylines = (routeData['polylines'] as Set)
-        .cast<Polyline>();
+      if (!mounted) return;
 
-    if (points.isNotEmpty) {
-      setState(() {
-        polylineCoordinates = points;
-        polylines = computedPolylines;
-        tripDistance = (routeData['distance'] ?? 0) as double?;
-        tripDuration = (routeData['duration'] ?? 0) as double?;
-      });
+      if (points.isNotEmpty) {
+        setState(() {
+          polylineCoordinates = points;
+          polylines = computedPolylines;
+          tripDistance = (routeData['distance'] ?? 0) as double?;
+          tripDuration = (routeData['duration'] ?? 0) as double?;
+        });
 
-      if (focus && polylineCoordinates.isNotEmpty) {
-        focusOnRoute();
+        if (focus && polylineCoordinates.isNotEmpty) {
+          focusOnRoute();
+        }
       }
-    } else {
-      setState(() {
-        hasRoute = false;
-        showInfoWindow = true;
-        tripDistance = 0;
-        tripDuration = 0;
-      });
+    } catch (e) {
+      print("Error updating route: $e");
     }
   }
 
@@ -503,15 +451,27 @@ class _HomeState extends State<Home> {
     if (!mounted) return;
 
     if (status == "ARRIVED_AT_PICKUP") {
-      if (vehicleLiveLocation != null && destinationLocation != null) {
-        updateRoute(vehicleLiveLocation!, destinationLocation!, focus: false);
+      if (currentStep != RideStep.pickingUp) {
+        setState(() {
+          currentStep = RideStep.pickingUp;
+        });
+        openSheet(Constants.pickingUpSize);
+      }
 
+      if (vehicleLiveLocation != null && destinationLocation != null) {
+        setState(() {
+          currentStep = RideStep.enRoute;
+        });
+
+        updateRoute(vehicleLiveLocation!, destinationLocation!, focus: false);
         followLiveCamera(vehicleLiveLocation!, bearing: vehicleBearing);
       }
     } else if (status == "IN_PROGRESS") {
-      setState(() {
-        currentStep = RideStep.enRoute;
-      });
+      if (currentStep != RideStep.enRoute) {
+        setState(() {
+          currentStep = RideStep.enRoute;
+        });
+      }
 
       if (currentLocation != null && destinationLocation != null) {
         updateRoute(currentLocation!, destinationLocation!, focus: false);
@@ -732,12 +692,20 @@ class _HomeState extends State<Home> {
 
               setState(() {
                 if (vehicleLiveLocation != null) {
-                  vehicleBearing = Geolocator.bearingBetween(
+                  double rawCalculatedBearing = Geolocator.bearingBetween(
                     vehicleLiveLocation!.latitude,
                     vehicleLiveLocation!.longitude,
                     newVehicleLocation.latitude,
                     newVehicleLocation.longitude,
                   );
+
+                  double diff = rawCalculatedBearing - vehicleBearing;
+                  if (diff > 180) diff -= 360;
+                  if (diff < -180) diff += 360;
+
+                  vehicleBearing = (vehicleBearing + 0.3 * diff) % 360;
+                } else {
+                  vehicleBearing = 0.0;
                 }
                 vehicleLiveLocation = newVehicleLocation;
               });
@@ -904,7 +872,7 @@ class _HomeState extends State<Home> {
 
                     circles: getCircles(),
 
-                    myLocationEnabled: currentStep != RideStep.enRoute,
+                    myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
 
@@ -969,6 +937,9 @@ class _HomeState extends State<Home> {
                       String street = await _locationService.getStreetName(
                         targetLocation,
                       );
+
+                      if (!mounted) return;
+
                       if (!hasRoute) {
                         setState(() {
                           startLocation = targetLocation;
