@@ -50,9 +50,30 @@ class TripApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> getTripStatus(String tripRequestId) async {
+  Future<Map<String, dynamic>?> getRequestStatus(String tripRequestId) async {
     try {
       final url = Uri.parse('$baseUrl/trips/request/status/$tripRequestId');
+      final headers = await _getHeaders();
+
+      if (headers == null) {
+        return {"error_type": "auth_error"};
+      }
+
+      final response = await http.get(url, headers: headers);
+
+      print("-------------------- status");
+      print(response.body);
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - getTripStatus Error: $e");
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getTripStatus(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/$tripRequestId');
       final headers = await _getHeaders();
 
       if (headers == null) {

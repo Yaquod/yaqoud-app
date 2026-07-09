@@ -20,10 +20,12 @@ import 'package:yaqood/Widgets/Map/map_info_window.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:yaqood/Widgets/confirm_trip_widget.dart';
+import 'package:yaqood/Widgets/en_route_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
 import 'package:yaqood/Widgets/picking_up_widget.dart';
 import 'package:yaqood/Widgets/searching_vehicle_widget.dart';
+import 'package:yaqood/Widgets/trip_complete_widget.dart';
 import 'package:yaqood/Widgets/trip_offer_widget.dart';
 
 class Home extends StatefulWidget {
@@ -47,6 +49,7 @@ class _HomeState extends State<Home> {
   bool showInfoWindow = true;
   bool hasRoute = false;
   bool isFirstVehicleLocationLoaded = false;
+  bool _routeFocused = false;
 
   LatLng? startLocation;
   LatLng? currentLocation;
@@ -118,7 +121,7 @@ class _HomeState extends State<Home> {
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
 
-            distanceFilter: 5,
+            distanceFilter: 10,
           ),
         ).listen((Position position) async {
           if (!mounted) return;
@@ -126,8 +129,13 @@ class _HomeState extends State<Home> {
           LatLng newLatLng = LatLng(position.latitude, position.longitude);
           currentLocation = newLatLng;
 
-          if (startLocation == null && !isSelectedFromSearch && !isMapMoving) {
+          if (startLocation == null &&
+              !isSelectedFromSearch &&
+              !isMapMoving &&
+              currentStep == RideStep.initial) {
             String street = await _locationService.getStreetName(newLatLng);
+
+            if (!mounted) return;
 
             setState(() {
               startLocation = newLatLng;
@@ -137,6 +145,31 @@ class _HomeState extends State<Home> {
 
             mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
           }
+
+          if (currentStep == RideStep.enRoute) {
+            setState(() {
+              vehicleLiveLocation = newLatLng;
+            });
+
+            followLiveCamera(newLatLng, bearing: position.heading);
+
+            if (destinationLocation != null) {
+              double distanceToTarget = Geolocator.distanceBetween(
+                newLatLng.latitude,
+                newLatLng.longitude,
+                destinationLocation!.latitude,
+                destinationLocation!.longitude,
+              );
+
+              if (distanceToTarget < 8) {
+                tripPollingTimer?.cancel();
+                setState(() {
+                  currentStep = RideStep.completed;
+                });
+                openSheet(Constants.maxSheetSize);
+              }
+            }
+          }
         });
   }
 
@@ -144,7 +177,7 @@ class _HomeState extends State<Home> {
   Set<Marker> getMarkers() {
     Set<Marker> markersSet = {};
 
-    if (startLocation != null) {
+    if (startLocation != null && currentStep != RideStep.enRoute) {
       markersSet.add(
         Marker(
           markerId: MarkerId("start"),
@@ -188,8 +221,60 @@ class _HomeState extends State<Home> {
     return markersSet;
   }
 
-  // Create route between start and destinatin locations and mange zooming
-  void createRoute(LatLng start, LatLng destination) async {
+  // // Create route between start and destinatin locations and mange zooming
+  // void createRoute(LatLng start, LatLng destination) async {
+  //   setState(() {
+  //     showInfoWindow = false;
+  //     hasRoute = true;
+  //   });
+
+  //   polylineCoordinates.clear();
+  //   polylines.clear();
+
+  //   print("*************** lat: ${start.latitude} *********************");
+  //   print("*************** long: ${start.longitude} *********************");
+
+  //   final routeData = await _mapRoutingService.getRouteData(
+  //     start: start,
+  //     destination: destination,
+  //   );
+
+  //   List<LatLng> points = (routeData['coordinates'] as List).cast<LatLng>();
+  //   Set<Polyline> computedPolylines = (routeData['polylines'] as Set)
+  //       .cast<Polyline>();
+
+  //   if (points.isNotEmpty) {
+  //     setState(() {
+  //       polylineCoordinates = points;
+  //       polylines = computedPolylines;
+
+  //       tripDistance = (routeData['distance'] ?? 0) as double?;
+  //       tripDuration = (routeData['duration'] ?? 0) as double?;
+  //     });
+
+  //     if (polylineCoordinates.isNotEmpty) {
+  //       if (!_routeFocused) {
+  //         _routeFocused = true;
+  //         focusOnRoute();
+  //       }
+  //     }
+  //   } else {
+  //     setState(() {
+  //       hasRoute = false;
+  //       showInfoWindow = true;
+  //       tripDistance = 0;
+  //       tripDuration = 0;
+  //     });
+  //   }
+  // }
+
+  // Update Route
+  Future<void> updateRoute(
+    LatLng start,
+    LatLng destination, {
+    bool focus = false,
+  }) async {
+    if (!mounted) return;
     setState(() {
       showInfoWindow = false;
       hasRoute = true;
@@ -197,9 +282,6 @@ class _HomeState extends State<Home> {
 
     polylineCoordinates.clear();
     polylines.clear();
-
-    print("*************** lat: ${start.latitude} *********************");
-    print("*************** long: ${start.longitude} *********************");
 
     final routeData = await _mapRoutingService.getRouteData(
       start: start,
@@ -214,12 +296,11 @@ class _HomeState extends State<Home> {
       setState(() {
         polylineCoordinates = points;
         polylines = computedPolylines;
-
         tripDistance = (routeData['distance'] ?? 0) as double?;
         tripDuration = (routeData['duration'] ?? 0) as double?;
       });
 
-      if (polylineCoordinates.isNotEmpty) {
+      if (focus && polylineCoordinates.isNotEmpty) {
         focusOnRoute();
       }
     } else {
@@ -230,6 +311,15 @@ class _HomeState extends State<Home> {
         tripDuration = 0;
       });
     }
+  }
+
+  // Follow live Location
+  void followLiveCamera(LatLng location, {double bearing = 0.0}) {
+    mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: location, zoom: 17, tilt: 35, bearing: bearing),
+      ),
+    );
   }
 
   // FocusOnRoute
@@ -313,19 +403,19 @@ class _HomeState extends State<Home> {
         currentStep = RideStep.searchingVehicle;
       });
 
-      startTripPolling();
+      startRequestPolling();
       openSheet(Constants.searchingSheetSize);
     }
   }
 
-  // start Trip HTTP Polling
-  void startTripPolling() {
+  // start Requst HTTP Polling
+  void startRequestPolling() {
     tripPollingTimer?.cancel();
 
     if (tripRequestId == null) return;
 
     tripPollingTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
-      final result = await _tripApiService.getTripStatus(tripRequestId!);
+      final result = await _tripApiService.getRequestStatus(tripRequestId!);
 
       if (result == null) return;
 
@@ -353,12 +443,12 @@ class _HomeState extends State<Home> {
 
       currentTripStatus = status;
 
-      handleTripStatus(status, estimatedTime, estimatedFare);
+      handleRequestStatus(status, estimatedTime, estimatedFare);
     });
   }
 
-  // Handle Trip Status
-  void handleTripStatus(
+  // Handle Request Status
+  void handleRequestStatus(
     String status,
     double estimatedTime,
     double estimatedFare,
@@ -375,6 +465,64 @@ class _HomeState extends State<Home> {
       });
 
       openSheet(Constants.tripSummary);
+    }
+  }
+
+  // start Trip HTTP Polling
+  void startTripPolling() {
+    tripPollingTimer?.cancel();
+
+    if (tripRequestId == null) return;
+
+    tripPollingTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
+      final result = await _tripApiService.getTripStatus(tripRequestId!);
+
+      if (result == null) return;
+
+      final data = result["data"];
+      if (data == null) {
+        print("Warning: result['data'] is null, skipping this polling tick");
+        return;
+      }
+
+      final status = data['status'] as String?;
+
+      if (status == null) {
+        print("Warning: status is null, skipping this polling tick");
+        return;
+      }
+
+      currentTripStatus = status;
+
+      handleTripStatus(status);
+    });
+  }
+
+  // Handle Trip Status
+  void handleTripStatus(String status) {
+    if (!mounted) return;
+
+    if (status == "ARRIVED_AT_PICKUP") {
+      if (vehicleLiveLocation != null && destinationLocation != null) {
+        updateRoute(vehicleLiveLocation!, destinationLocation!, focus: false);
+
+        followLiveCamera(vehicleLiveLocation!, bearing: vehicleBearing);
+      }
+    } else if (status == "IN_PROGRESS") {
+      setState(() {
+        currentStep = RideStep.enRoute;
+      });
+
+      if (currentLocation != null && destinationLocation != null) {
+        updateRoute(currentLocation!, destinationLocation!, focus: false);
+        followLiveCamera(currentLocation!, bearing: vehicleBearing);
+      }
+    } else if (status == "COMPLETED") {
+      tripPollingTimer?.cancel();
+      setState(() {
+        currentStep = RideStep.completed;
+      });
+      openSheet(Constants.maxSheetSize);
     }
   }
 
@@ -527,7 +675,10 @@ class _HomeState extends State<Home> {
     FocusScope.of(context).unfocus();
 
     openSheet(Constants.minSheetSize);
-    createRoute(startLocation!, destinationLocation!);
+
+    if (startLocation != null && destinationLocation != null) {
+      updateRoute(startLocation!, destinationLocation!, focus: true);
+    }
 
     Future.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;
@@ -543,12 +694,15 @@ class _HomeState extends State<Home> {
   void _handleLocationGPSPressed() {
     if (currentLocation == null) return;
 
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(
-        hasRoute ? startLocation! : currentLocation!,
-        16,
-      ),
-    );
+    if (hasRoute && startLocation != null) {
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(startLocation!, 16),
+      );
+    } else {
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(currentLocation!, 16),
+      );
+    }
   }
 
   // listen To Trip Updates
@@ -571,7 +725,9 @@ class _HomeState extends State<Home> {
                 ? (payload['lon'] as num).toDouble()
                 : null;
 
-            if (lat != null && lng != null) {
+            if (lat != null &&
+                lng != null &&
+                currentStep == RideStep.pickingUp) {
               LatLng newVehicleLocation = LatLng(lat, lng);
 
               setState(() {
@@ -583,31 +739,20 @@ class _HomeState extends State<Home> {
                     newVehicleLocation.longitude,
                   );
                 }
-
                 vehicleLiveLocation = newVehicleLocation;
               });
 
-              if (currentStep == RideStep.pickingUp && startLocation != null) {
-                createRoute(newVehicleLocation, startLocation!);
-              } else if (currentStep == RideStep.enRoute &&
-                  destinationLocation != null) {
-                createRoute(newVehicleLocation, destinationLocation!);
+              if (startLocation != null) {
+                updateRoute(newVehicleLocation, startLocation!, focus: false);
               }
 
               if (!isFirstVehicleLocationLoaded) {
                 isFirstVehicleLocationLoaded = true;
-
                 openSheet(Constants.pickingUpSize);
 
-                mapController?.animateCamera(
-                  CameraUpdate.newLatLngZoom(newVehicleLocation, 16),
-                );
-              } else {
-                if (!isMapMoving) {
-                  mapController?.animateCamera(
-                    CameraUpdate.newLatLng(newVehicleLocation),
-                  );
-                }
+                followLiveCamera(newVehicleLocation, bearing: vehicleBearing);
+              } else if (!isMapMoving) {
+                followLiveCamera(newVehicleLocation, bearing: vehicleBearing);
               }
             }
           },
@@ -640,6 +785,25 @@ class _HomeState extends State<Home> {
       );
     }
     return circlesSet;
+  }
+
+  void _resetToHomeScreen() {
+    tripPollingTimer?.cancel();
+    sseTripSubscription?.cancel();
+
+    setState(() {
+      currentStep = RideStep.initial;
+      hasRoute = false;
+      vehicleLiveLocation = null;
+      polylineCoordinates.clear();
+      polylines.clear();
+      startController.clear();
+      destinationController.clear();
+      destinationLocation = null;
+      destinationStreetName = null;
+      tripRequestId = null;
+    });
+    openSheet(Constants.collapseSheetSize);
   }
 
   // init State
@@ -740,7 +904,7 @@ class _HomeState extends State<Home> {
 
                     circles: getCircles(),
 
-                    myLocationEnabled: true,
+                    myLocationEnabled: currentStep != RideStep.enRoute,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
 
@@ -998,6 +1162,8 @@ class _HomeState extends State<Home> {
                                   currentStep = RideStep.payment;
                                 });
                                 openSheet(Constants.maxSheetSize);
+
+                                startTripPolling();
                               },
                               declineOffer: handleDeclineOffer,
                             ),
@@ -1028,6 +1194,24 @@ class _HomeState extends State<Home> {
                                   startStreetName ?? "Current Location",
                               distance: tripDistance,
                               duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.enRoute)
+                            EnRouteWidget(
+                              destinationStreetName:
+                                  destinationStreetName ?? "Destination",
+                              distance: tripDistance,
+                              duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.completed)
+                            TripCompleteWidget(
+                              onSubmitRating: (rating, comment) {
+                                _resetToHomeScreen();
+                              },
+                              onSkipRating: () {
+                                _resetToHomeScreen();
+                              },
                             ),
                         ],
                       ),
