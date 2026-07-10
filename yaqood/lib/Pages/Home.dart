@@ -758,20 +758,13 @@ class _HomeState extends State<Home> {
   void _resetToHomeScreen() {
     tripPollingTimer?.cancel();
     sseTripSubscription?.cancel();
+    positionStream?.cancel();
 
-    setState(() {
-      currentStep = RideStep.initial;
-      hasRoute = false;
-      vehicleLiveLocation = null;
-      polylineCoordinates.clear();
-      polylines.clear();
-      startController.clear();
-      destinationController.clear();
-      destinationLocation = null;
-      destinationStreetName = null;
-      tripRequestId = null;
-    });
-    openSheet(Constants.collapseSheetSize);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const Home()),
+      (route) => false,
+    );
   }
 
   // init State
