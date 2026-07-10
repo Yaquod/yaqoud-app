@@ -183,4 +183,19 @@ class TripApiService {
       print("SSE Stream Error: $e");
     }
   }
+
+  Future<Map<String, dynamic>?> startTrip(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/request/$tripRequestId/start');
+      final headers = await _getHeaders();
+
+      if (headers == null) return {"error_type": "auth_error"};
+
+      final response = await http.post(url, headers: headers);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - startTrip Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
 }

@@ -6,6 +6,7 @@ enum RideStep {
   offer,
   payment,
   pickingUp,
+  safetyCheck,
   enRoute,
-  completed
+  completed,
 }

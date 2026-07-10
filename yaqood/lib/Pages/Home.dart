@@ -24,6 +24,7 @@ import 'package:yaqood/Widgets/en_route_widget.dart';
 import 'package:yaqood/Widgets/location_search_widget.dart';
 import 'package:yaqood/Widgets/payment_widget.dart';
 import 'package:yaqood/Widgets/picking_up_widget.dart';
+import 'package:yaqood/Widgets/safety_check_widget.dart';
 import 'package:yaqood/Widgets/searching_vehicle_widget.dart';
 import 'package:yaqood/Widgets/trip_complete_widget.dart';
 import 'package:yaqood/Widgets/trip_offer_widget.dart';
@@ -450,19 +451,24 @@ class _HomeState extends State<Home> {
   void handleTripStatus(String status) {
     if (!mounted) return;
 
-    if (status == "ARRIVED_AT_PICKUP") {
+    if (status == "VEHICLE_ON_WAY") {
       if (currentStep != RideStep.pickingUp) {
         setState(() {
           currentStep = RideStep.pickingUp;
         });
         openSheet(Constants.pickingUpSize);
       }
+    } else if (status == "ARRIVED_AT_PICKUP") {
+      if (currentStep == RideStep.enRoute) return;
+
+      if (currentStep != RideStep.safetyCheck) {
+        setState(() {
+          currentStep = RideStep.safetyCheck;
+        });
+        openSheet(Constants.pickingUpSize);
+      }
 
       if (vehicleLiveLocation != null && destinationLocation != null) {
-        setState(() {
-          currentStep = RideStep.enRoute;
-        });
-
         updateRoute(vehicleLiveLocation!, destinationLocation!, focus: false);
         followLiveCamera(vehicleLiveLocation!, bearing: vehicleBearing);
       }
@@ -582,6 +588,48 @@ class _HomeState extends State<Home> {
       }
     }
     return false;
+  }
+
+  // handle Start Trip
+  Future<void> handleStartTrip() async {
+    if (tripRequestId == null) return;
+
+    tripPollingTimer?.cancel();
+
+    final result = await _tripApiService.startTrip(tripRequestId!);
+
+    if (result != null && result["success"] == true) {
+      if (mounted) {
+        setState(() {
+          currentStep = RideStep.enRoute;
+        });
+
+        if (currentLocation != null) {
+          followLiveCamera(currentLocation!, bearing: vehicleBearing);
+        }
+
+        showSnackBar(
+          context: context,
+          message:
+              "Trip started successfully! Enjoy your safe autonomous journey.",
+          isError: false,
+        );
+      }
+
+      startTripPolling();
+    } else {
+      if (mounted) {
+        if (result != null && result["error_type"] == "auth_error") {
+          showSnackBar(context: context, message: "Login expired");
+        } else {
+          showSnackBar(
+            context: context,
+            message: "Failed to start trip. Please try again.",
+          );
+        }
+        startTripPolling();
+      }
+    }
   }
 
   void _onStartLocationChanged(LatLng location, Prediction prediction) {
@@ -886,11 +934,7 @@ class _HomeState extends State<Home> {
 
                         if (isFirstTime) {
                           isFirstTime = false;
-                        } else if (currentStep != RideStep.pickingUp &&
-                            currentStep != RideStep.enRoute &&
-                            currentStep != RideStep.searchingVehicle &&
-                            currentStep != RideStep.payment &&
-                            currentStep != RideStep.offer) {
+                        } else if (currentStep == RideStep.initial) {
                           openSheet(Constants.minSheetSize);
                         }
                       }
@@ -1158,6 +1202,13 @@ class _HomeState extends State<Home> {
                                   startStreetName ?? "Current Location",
                               distance: tripDistance,
                               duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.safetyCheck)
+                            SafetyCheckWidget(
+                              onStartRidePressed: () async {
+                                await handleStartTrip();
+                              },
                             ),
 
                           if (currentStep == RideStep.enRoute)
