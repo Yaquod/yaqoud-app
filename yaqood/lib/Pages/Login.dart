@@ -12,7 +12,6 @@ import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/ForgetPassword.dart';
 import 'package:yaqood/Pages/Home.dart';
 import 'package:yaqood/Pages/Signup.dart';
-import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
 import 'package:yaqood/Widgets/Custom_TextFiled.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -106,12 +105,9 @@ class _LoginState extends State<Login> {
       body: jsonEncode({"idToken": idToken, "fcmToken": fcmToken ?? ".."}),
     );
 
-    
-
-
     final result = jsonDecode(response.body);
 
-    if(!mounted) return;
+    if (!mounted) return;
 
     if (result["success"] == true) {
       token = result["data"]["accessToken"];
@@ -226,9 +222,10 @@ class _LoginState extends State<Login> {
                                 ),
                                 Gap(10),
 
-                                CustomPasswordFiled(
+                                CustomTextfiled(
                                   hintText: "Password",
-                                  passwordController: password,
+                                  formController: password,
+                                  isPassword: true,
                                 ),
 
                                 Gap(10),
@@ -307,8 +304,8 @@ class _LoginState extends State<Login> {
 
                                     final result = await loginRequest();
 
-                                    if(!mounted)return;
-                                    
+                                    if (!mounted) return;
+
                                     if (result["success"] == true) {
                                       token = result["data"]["accessToken"];
                                       await saveRememberMe(rememberMe);

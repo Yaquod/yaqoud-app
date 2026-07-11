@@ -8,7 +8,6 @@ import 'package:yaqood/Enums/VerificationPurpose.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Pages/VerifyCode.dart';
-import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
 import 'package:yaqood/Widgets/Custom_TextFiled.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -101,8 +100,8 @@ class _SignupState extends State<Signup> {
             onPressed: () {
               Navigator.pop(context);
             },
-            icon: Icon(Icons.arrow_back,),
-            padding: EdgeInsets.only(top:35, left: 5),
+            icon: Icon(Icons.arrow_back),
+            padding: EdgeInsets.only(top: 35, left: 5),
           ),
         ),
 
@@ -192,16 +191,18 @@ class _SignupState extends State<Signup> {
 
                                   Gap(10),
 
-                                  CustomPasswordFiled(
+                                  CustomTextfiled(
+                                    formController: password,
                                     hintText: "Create Password",
-                                    passwordController: password,
+                                    isPassword: true,
                                   ),
 
                                   Gap(10),
 
-                                  CustomPasswordFiled(
+                                  CustomTextfiled(
+                                    formController: confirmPassword,
                                     hintText: "Confirm Password",
-                                    passwordController: confirmPassword,
+                                    isPassword: true,
                                   ),
 
                                   Gap(24),

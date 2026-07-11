@@ -6,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Pages/Login.dart';
-import 'package:yaqood/Widgets/Custom_Password_Filed.dart';
 import 'package:yaqood/Widgets/Custom_Text.dart';
+import 'package:yaqood/Widgets/Custom_TextFiled.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 class ResetPassword extends StatefulWidget {
@@ -136,7 +136,10 @@ class _ResetPasswordState extends State<ResetPassword> {
 
                                 Gap(12),
 
-                                CustomText(text: "Reset Password", fontSize: 32),
+                                CustomText(
+                                  text: "Reset Password",
+                                  fontSize: 32,
+                                ),
 
                                 Text(
                                   "Enter your New Password",
@@ -151,16 +154,18 @@ class _ResetPasswordState extends State<ResetPassword> {
 
                                 Gap(24),
 
-                                CustomPasswordFiled(
-                                  hintText: 'Create  Password',
-                                  passwordController: password,
+                                CustomTextfiled(
+                                  formController: password,
+                                  hintText: "Create Password",
+                                  isPassword: true,
                                 ),
 
                                 Gap(24),
 
-                                CustomPasswordFiled(
-                                  hintText: 'Confirm Password',
-                                  passwordController: confirmPassword,
+                                CustomTextfiled(
+                                  formController: confirmPassword,
+                                  hintText: "Confirm Password",
+                                  isPassword: true,
                                 ),
 
                                 Gap(24),
