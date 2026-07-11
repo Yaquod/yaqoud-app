@@ -198,4 +198,19 @@ class TripApiService {
       return {"error_type": "network_error"};
     }
   }
+
+  Future<Map<String, dynamic>?> completeTrip(String tripRequestId) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/request/$tripRequestId/end');
+      final headers = await _getHeaders();
+
+      if (headers == null) return {"error_type": "auth_error"};
+
+      final response = await http.post(url, headers: headers);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - completeTrip Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
 }

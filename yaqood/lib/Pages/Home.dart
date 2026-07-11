@@ -26,6 +26,7 @@ import 'package:yaqood/Widgets/payment_widget.dart';
 import 'package:yaqood/Widgets/picking_up_widget.dart';
 import 'package:yaqood/Widgets/safety_check_widget.dart';
 import 'package:yaqood/Widgets/searching_vehicle_widget.dart';
+import 'package:yaqood/Widgets/trip_checkout_widget.dart';
 import 'package:yaqood/Widgets/trip_complete_widget.dart';
 import 'package:yaqood/Widgets/trip_offer_widget.dart';
 
@@ -472,7 +473,7 @@ class _HomeState extends State<Home> {
         updateRoute(vehicleLiveLocation!, destinationLocation!, focus: false);
         followLiveCamera(vehicleLiveLocation!, bearing: vehicleBearing);
       }
-    } else if (status == "IN_PROGRESS") {
+    } else if (status == "IN_PROGRESS" || status == "ARRIVED_AT_DESTINATION") {
       if (currentStep != RideStep.enRoute) {
         setState(() {
           currentStep = RideStep.enRoute;
@@ -485,10 +486,13 @@ class _HomeState extends State<Home> {
       }
     } else if (status == "COMPLETED") {
       tripPollingTimer?.cancel();
-      setState(() {
-        currentStep = RideStep.completed;
-      });
-      openSheet(Constants.maxSheetSize);
+
+      if (currentStep != RideStep.checkout) {
+        setState(() {
+          currentStep = RideStep.checkout;
+        });
+        openSheet(Constants.pickingUpSize);
+      }
     }
   }
 
@@ -628,6 +632,33 @@ class _HomeState extends State<Home> {
           );
         }
         startTripPolling();
+      }
+    }
+  }
+
+  // handle complete Trip
+  Future<void> handleCompleteTrip() async {
+    if (tripRequestId == null) return;
+
+    final result = await _tripApiService.completeTrip(tripRequestId!);
+
+    if (result != null && result["success"] == true) {
+      if (mounted) {
+        setState(() {
+          currentStep = RideStep.completed;
+        });
+        openSheet(Constants.maxSheetSize);
+      }
+    } else {
+      if (mounted) {
+        if (result != null && result["error_type"] == "auth_error") {
+          showSnackBar(context: context, message: "Login expired");
+        } else {
+          showSnackBar(
+            context: context,
+            message: "Failed to confirm leave. Please try again.",
+          );
+        }
       }
     }
   }
@@ -1217,6 +1248,13 @@ class _HomeState extends State<Home> {
                                   destinationStreetName ?? "Destination",
                               distance: tripDistance,
                               duration: tripDuration,
+                            ),
+
+                          if (currentStep == RideStep.checkout)
+                            TripCheckoutWidget(
+                              onEndTripPressed: () async {
+                                await handleCompleteTrip();
+                              },
                             ),
 
                           if (currentStep == RideStep.completed)

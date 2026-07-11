@@ -8,5 +8,6 @@ enum RideStep {
   pickingUp,
   safetyCheck,
   enRoute,
+  checkout,
   completed,
 }
