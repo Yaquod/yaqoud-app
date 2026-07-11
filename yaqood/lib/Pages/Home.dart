@@ -11,6 +11,7 @@ import 'package:yaqood/Enums/ride_step.dart';
 import 'package:yaqood/Services/location_service.dart';
 import 'package:yaqood/Services/map_helper.dart';
 import 'package:yaqood/Services/map_routing_service.dart';
+import 'package:yaqood/Services/profile_api_service.dart';
 import 'package:yaqood/Services/trip_api_service.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
@@ -51,6 +52,7 @@ class _HomeState extends State<Home> {
   bool showInfoWindow = true;
   bool hasRoute = false;
   bool isFirstVehicleLocationLoaded = false;
+  bool isLoadingProfile = true;
 
   LatLng? startLocation;
   LatLng? currentLocation;
@@ -97,8 +99,11 @@ class _HomeState extends State<Home> {
   final LocationService _locationService = LocationService();
   final MapRoutingService _mapRoutingService = MapRoutingService();
   final TripApiService _tripApiService = TripApiService();
+  final ProfileApiService _profileApiService = ProfileApiService();
 
   BitmapDescriptor? carMarkerIcon;
+
+  Map<String, dynamic>? profileResponseData;
 
   // assign start Location to it`s textField
   void updatesStartFieldWithStartLocation() async {
@@ -846,11 +851,30 @@ class _HomeState extends State<Home> {
     );
   }
 
+  Future<void> _fetchUserProfileData() async {
+    final data = await _profileApiService.getUserProfile();
+
+    if (data != null && data["error_type"] == null) {
+      setState(() {
+        profileResponseData = data;
+        isLoadingProfile = false;
+      });
+    } else {
+      setState(() {
+        isLoadingProfile = false;
+      });
+      if (data?["error_type"] == "auth_error") {
+        print("Session expired, user needs to login again.");
+      }
+    }
+  }
+
   // init State
   @override
   void initState() {
     super.initState();
     _loadCustomMarker();
+    _fetchUserProfileData();
 
     currentLocationStream();
 
@@ -928,7 +952,15 @@ class _HomeState extends State<Home> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: Colors.white,
-      drawer: AppDrawer(),
+      drawer: AppDrawer(
+        userData: profileResponseData,
+        walletBalance: "",
+        onProfileUpdated: (updatedData) {
+          setState(() {
+            profileResponseData = updatedData;
+          });
+        },
+      ),
       body: currentLocation == null
           ? Center(child: CircularProgressIndicator(color: PrimaryColor))
           : Stack(

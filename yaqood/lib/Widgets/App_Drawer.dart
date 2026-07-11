@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Pages/Login.dart';
+import 'package:yaqood/Pages/profile_screen.dart';
 import 'package:yaqood/Pages/wallet_screen.dart';
 import 'package:yaqood/Widgets/Custom_ListTile.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -21,128 +22,214 @@ Future<void> logout(BuildContext context) async {
 }
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  final Map<String, dynamic>? userData;
+  final String? walletBalance;
+  final Function(Map<String, dynamic>) onProfileUpdated;
+
+  const AppDrawer({
+    super.key,
+    required this.userData,
+    required this.walletBalance,
+    required this.onProfileUpdated,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (userData == null) {
+      return Drawer(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        child: Center(child: CircularProgressIndicator(color: PrimaryColor)),
+      );
+    }
+
+    final String firstName = userData?['firstName'] ?? '';
+    final String lastName = userData?['lastName'] ?? '';
+    final String fullName = '$firstName $lastName'.trim().isEmpty
+        ? 'Yaqood User'
+        : '$firstName $lastName'.trim();
+
+    final String email = userData?['email'] ?? '';
+    final String? imageUrl = userData?['imageUrl'];
+
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
+      backgroundColor: Colors.white,
+      elevation: 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 270,
-            color: PrimaryColor,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 30, top: 50),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 45,
-                    backgroundImage: AssetImage("assets/images/profile.png"),
-                  ),
-
-                  Gap(15),
-
-                  Text(
-                    "User Name",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-
-                  Gap(15),
-
-                  Container(
-                    width: 128,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      color: Colors.white,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Text(
-                          "Cash",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-
-                        Text("2000\$"),
-
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Color(0xffC1C0C9),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            padding: const EdgeInsets.only(
+              top: 60,
+              left: 24,
+              right: 24,
+              bottom: 24,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade100, width: 1),
               ),
             ),
-          ),
-
-          Padding(
-            padding: EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomListTile(title: "Home", icon: Icons.home, onTap: () {}),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => ProfileScreen(
+                          userData: userData,
+                          onProfileUpdated: onProfileUpdated,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 72,
+                    width: 72,
+                    decoration: BoxDecoration(
+                      color: PrimaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: PrimaryColor.withValues(alpha: 0.15),
+                        width: 2,
+                      ),
+                    ),
+                    child: imageUrl != null && imageUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(36),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Text(
+                                      firstName.isNotEmpty
+                                          ? firstName[0].toUpperCase()
+                                          : 'Y',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: PrimaryColor,
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              firstName.isNotEmpty
+                                  ? firstName[0].toUpperCase()
+                                  : 'Y',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: PrimaryColor,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
 
-                Gap(10),
+                const Gap(16),
 
+                Text(
+                  fullName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                if (email.isNotEmpty) ...[
+                  const Gap(4),
+                  Text(
+                    email,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const Gap(8),
+
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                CustomListTile(
+                  title: "Home",
+                  icon: Icons.home_outlined,
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Gap(10),
                 CustomListTile(
                   title: "My Wallet",
-                  icon: Icons.wallet_rounded,
-                  onTap: () async{
-                    final navigator = Navigator.of(context);
-
-                    navigator.pop();
-
-                    navigator.push(MaterialPageRoute(builder: (c)=> WalletScreen()));
+                  icon: Icons.wallet_outlined,
+                  onTap: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (c) => const WalletScreen()),
+                    );
                   },
                 ),
-
-                Gap(10),
-
+                const Gap(10),
                 CustomListTile(
                   title: "History",
-                  icon: Icons.history_outlined,
+                  icon: Icons.history_rounded,
                   onTap: () {},
                 ),
-
-                Gap(10),
-
+                const Gap(10),
                 CustomListTile(
                   title: "Notifications",
-                  icon: Icons.notifications,
+                  icon: Icons.notifications_none_rounded,
                   onTap: () {},
                 ),
-
-                Gap(10),
-
+                const Gap(10),
                 CustomListTile(
-                  title: "Settings",
-                  icon: Icons.settings,
-                  onTap: () {},
-                ),
-
-                Gap(10),
-
-                CustomListTile(
-                  title: "Logout",
-                  icon: Icons.logout,
+                  title: "My Profile",
+                  icon: Icons.person_outline_rounded,
                   onTap: () {
-                    logout(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => ProfileScreen(
+                          userData: userData,
+                          onProfileUpdated: onProfileUpdated,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ],
+            ),
+          ),
+
+          Divider(color: Colors.grey.shade100, height: 1),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(iconTheme: IconThemeData(color: Colors.red.shade600)),
+              child: CustomListTile(
+                title: "Logout",
+                icon: Icons.logout_rounded,
+                onTap: () => logout(context),
+              ),
             ),
           ),
         ],
