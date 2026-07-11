@@ -3,6 +3,7 @@ import 'package:gap/gap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Pages/profile_screen.dart';
+import 'package:yaqood/Pages/settings_screen.dart';
 import 'package:yaqood/Pages/wallet_screen.dart';
 import 'package:yaqood/Widgets/Custom_ListTile.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
@@ -23,13 +24,11 @@ Future<void> logout(BuildContext context) async {
 
 class AppDrawer extends StatelessWidget {
   final Map<String, dynamic>? userData;
-  final String? walletBalance;
   final Function(Map<String, dynamic>) onProfileUpdated;
 
   const AppDrawer({
     super.key,
     required this.userData,
-    required this.walletBalance,
     required this.onProfileUpdated,
   });
 
@@ -55,6 +54,12 @@ class AppDrawer extends StatelessWidget {
     return Drawer(
       backgroundColor: Colors.white,
       elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -66,13 +71,12 @@ class AppDrawer extends StatelessWidget {
               bottom: 24,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: PrimaryColor.withValues(alpha: 0.06),
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade100, width: 1),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
                 InkWell(
                   onTap: () {
@@ -87,19 +91,23 @@ class AppDrawer extends StatelessWidget {
                     );
                   },
                   child: Container(
-                    height: 72,
-                    width: 72,
+                    height: 64,
+                    width: 64,
                     decoration: BoxDecoration(
                       color: PrimaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: PrimaryColor.withValues(alpha: 0.15),
-                        width: 2,
-                      ),
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: imageUrl != null && imageUrl.isNotEmpty
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(36),
+                            borderRadius: BorderRadius.circular(32),
                             child: Image.network(
                               imageUrl,
                               fit: BoxFit.cover,
@@ -110,7 +118,7 @@ class AppDrawer extends StatelessWidget {
                                           ? firstName[0].toUpperCase()
                                           : 'Y',
                                       style: TextStyle(
-                                        fontSize: 28,
+                                        fontSize: 24,
                                         fontWeight: FontWeight.bold,
                                         color: PrimaryColor,
                                       ),
@@ -124,7 +132,7 @@ class AppDrawer extends StatelessWidget {
                                   ? firstName[0].toUpperCase()
                                   : 'Y',
                               style: TextStyle(
-                                fontSize: 28,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: PrimaryColor,
                               ),
@@ -132,33 +140,37 @@ class AppDrawer extends StatelessWidget {
                           ),
                   ),
                 ),
-
-                const Gap(16),
-
-                Text(
-                  fullName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                const Gap(14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (email.isNotEmpty) ...[
+                        const Gap(2),
+                        Text(
+                          email,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-
-                if (email.isNotEmpty) ...[
-                  const Gap(4),
-                  Text(
-                    email,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
@@ -174,10 +186,11 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.home_outlined,
                   onTap: () => Navigator.pop(context),
                 ),
-                const Gap(10),
+                const Gap(8),
+
                 CustomListTile(
-                  title: "My Wallet",
-                  icon: Icons.wallet_outlined,
+                  title: "Cards",
+                  icon: Icons.credit_card_rounded,
                   onTap: () async {
                     Navigator.push(
                       context,
@@ -185,19 +198,8 @@ class AppDrawer extends StatelessWidget {
                     );
                   },
                 ),
-                const Gap(10),
-                CustomListTile(
-                  title: "History",
-                  icon: Icons.history_rounded,
-                  onTap: () {},
-                ),
-                const Gap(10),
-                CustomListTile(
-                  title: "Notifications",
-                  icon: Icons.notifications_none_rounded,
-                  onTap: () {},
-                ),
-                const Gap(10),
+                const Gap(8),
+
                 CustomListTile(
                   title: "My Profile",
                   icon: Icons.person_outline_rounded,
@@ -206,6 +208,35 @@ class AppDrawer extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (c) => ProfileScreen(
+                          userData: userData,
+                          onProfileUpdated: onProfileUpdated,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Gap(8),
+
+                CustomListTile(
+                  title: "Rides History",
+                  icon: Icons.history_rounded,
+                  onTap: () {},
+                ),
+                const Gap(8),
+                CustomListTile(
+                  title: "Notifications",
+                  icon: Icons.notifications_none_rounded,
+                  onTap: () {},
+                ),
+                const Gap(8),
+                CustomListTile(
+                  title: "Settings",
+                  icon: Icons.settings_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => SettingsScreen(
                           userData: userData,
                           onProfileUpdated: onProfileUpdated,
                         ),

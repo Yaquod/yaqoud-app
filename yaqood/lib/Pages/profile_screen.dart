@@ -258,6 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   hintText: "Email Address",
                                   prefixIcon: Icons.mail_outline,
                                   keyboardType: TextInputType.emailAddress,
+                                  enabled: false,
                                 ),
                                 const Gap(16),
 

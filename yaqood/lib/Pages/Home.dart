@@ -954,7 +954,6 @@ class _HomeState extends State<Home> {
       backgroundColor: Colors.white,
       drawer: AppDrawer(
         userData: profileResponseData,
-        walletBalance: "",
         onProfileUpdated: (updatedData) {
           setState(() {
             profileResponseData = updatedData;

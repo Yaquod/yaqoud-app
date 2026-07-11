@@ -125,7 +125,7 @@ class _WalletScreenState extends State<WalletScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
-          "My Wallet",
+          "Cards",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
