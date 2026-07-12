@@ -35,7 +35,7 @@ class _TripHistoryCardState extends State<TripHistoryCard> {
     } else if (widget.trip.status == "CANCELLED_BY_SYSTEM") {
       statusText = "System Cancelled";
     } else if (widget.trip.status == "CANCELLED_BY_PASSENGER") {
-      statusText = "Passenger Cancelled";
+      statusText = "Passenger Cancel";
     }
 
     final String formattedDate = DateFormat(
@@ -54,6 +54,7 @@ class _TripHistoryCardState extends State<TripHistoryCard> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: InkWell(
         onTap: () {
+          if (!isCompleted) return;
           setState(() {
             _isExpanded = !_isExpanded;
           });
@@ -213,125 +214,116 @@ class _TripHistoryCardState extends State<TripHistoryCard> {
                 ],
               ),
 
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Column(
-                  children: [
-                    const Gap(12),
-                    Divider(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      height: 1,
-                    ),
-                    const Gap(12),
-                    _buildDetailRow(
-                      Icons.access_time_rounded,
-                      "Pickup Time",
-                      startTime,
-                    ),
-                    const Gap(8),
-                    _buildDetailRow(
-                      Icons.access_time_filled_rounded,
-                      "Drop-off Time",
-                      endTime,
-                    ),
-                    const Gap(8),
-                    _buildDetailRow(
-                      Icons.palette_outlined,
-                      "Vehicle Color",
-                      widget.trip.color.toLowerCase(),
-                    ),
-
-                    if (tripRating != null) ...[
-                      const Gap(8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            size: 16,
-                            color: Colors.amber.shade700,
-                          ),
-                          const Gap(8),
-                          Text(
-                            "Your Rating",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            "$tripRating / 5.0",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
+              if (isCompleted) ...[
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    children: [
+                      const Gap(12),
+                      Divider(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        height: 1,
                       ),
-                    ],
-                  ],
-                ),
-                crossFadeState: _isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 255),
-              ),
+                      const Gap(12),
+                      _buildDetailRow(
+                        Icons.access_time_rounded,
+                        "Pickup Time",
+                        startTime,
+                      ),
+                      const Gap(8),
+                      _buildDetailRow(
+                        Icons.access_time_filled_rounded,
+                        "Drop-off Time",
+                        endTime,
+                      ),
+                      const Gap(8),
+                      _buildDetailRow(
+                        Icons.palette_outlined,
+                        "Vehicle Color",
+                        widget.trip.color.toLowerCase(),
+                      ),
 
-              const Gap(12),
-              Divider(color: Colors.white.withValues(alpha: 0.4), height: 1),
-              const Gap(12),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    _isExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey.shade600,
-                  ),
-                  if (isCompleted && widget.trip.amount != null)
-                    Row(
-                      children: [
-                        if (tripRating != null) ...[
-                          Icon(
-                            Icons.star_rounded,
-                            size: 18,
-                            color: Colors.amber.shade700,
-                          ),
-                          const Gap(2),
-                          Text(
-                            "$tripRating ",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade800,
-                              fontSize: 13,
+                      if (tripRating != null) ...[
+                        const Gap(8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: Colors.amber.shade700,
                             ),
-                          ),
-                          const Gap(8),
-                        ],
-                        Text(
-                          "${widget.trip.amount!.toStringAsFixed(1)} ${widget.trip.currency ?? 'EGP'}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                            fontSize: 15,
-                          ),
+                            const Gap(8),
+                            Text(
+                              "Your Rating",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              "$tripRating / 5.0",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    )
-                  else
-                    Text(
-                      "No Charge",
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontStyle: FontStyle.italic,
-                        fontSize: 13,
-                      ),
+                    ],
+                  ),
+                  crossFadeState: _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 255),
+                ),
+                const Gap(12),
+                Divider(color: Colors.white.withValues(alpha: 0.4), height: 1),
+                const Gap(12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: Colors.grey.shade600,
                     ),
-                ],
-              ),
+                    if (widget.trip.amount != null)
+                      Row(
+                        children: [
+                          if (tripRating != null) ...[
+                            Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: Colors.amber.shade700,
+                            ),
+                            const Gap(2),
+                            Text(
+                              "$tripRating ",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const Gap(8),
+                          ],
+                          Text(
+                            "${widget.trip.amount!.toStringAsFixed(1)} ${widget.trip.currency ?? 'EGP'}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
