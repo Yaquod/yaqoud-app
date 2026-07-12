@@ -53,10 +53,8 @@ class _TripCompleteWidgetState extends State<TripCompleteWidget> {
             allowHalfRating: false,
             itemCount: 5,
             itemPadding: const EdgeInsets.symmetric(horizontal: 6.0),
-            itemBuilder: (context, _) => const Icon(
-              Icons.star_rounded,
-              color: Colors.amber,
-            ),
+            itemBuilder: (context, _) =>
+                const Icon(Icons.star_rounded, color: Colors.amber),
             onRatingUpdate: (rating) {
               setState(() {
                 _selectedStars = rating.toInt();
@@ -69,7 +67,8 @@ class _TripCompleteWidgetState extends State<TripCompleteWidget> {
           controller: _commentController,
           maxLines: 3,
           decoration: InputDecoration(
-            hintText: "Tell us about the vehicle condition or ride smoothness (Optional)...",
+            hintText:
+                "Tell us about the vehicle condition or ride smoothness (Optional)...",
             hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -86,14 +85,28 @@ class _TripCompleteWidgetState extends State<TripCompleteWidget> {
           style: ElevatedButton.styleFrom(
             backgroundColor: PrimaryColor,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: () {
-            widget.onSubmitRating(_selectedStars, _commentController.text.trim());
+            final String cleanComment = _commentController.text.trim();
+
+            // 🎯 أمر الطباعة للتتبع في الـ Widget
+            print("============= RATING WIDGET TRIGGERED =============");
+            print("Selected Stars (Rating): $_selectedStars");
+            print("User Comment: '$cleanComment'");
+            print("===================================================");
+
+            widget.onSubmitRating(_selectedStars, cleanComment); //
           },
           child: const Text(
             "Submit Review",
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const Gap(8),

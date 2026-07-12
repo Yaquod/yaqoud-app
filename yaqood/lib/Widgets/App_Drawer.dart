@@ -5,6 +5,7 @@ import 'package:yaqood/Pages/Login.dart';
 import 'package:yaqood/Pages/profile_screen.dart';
 import 'package:yaqood/Pages/settings_screen.dart';
 import 'package:yaqood/Pages/wallet_screen.dart';
+import 'package:yaqood/Pages/trip_history_screen.dart';
 import 'package:yaqood/Widgets/Custom_ListTile.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
@@ -34,14 +35,6 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (userData == null) {
-      return Drawer(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        child: Center(child: CircularProgressIndicator(color: PrimaryColor)),
-      );
-    }
-
     final String firstName = userData?['firstName'] ?? '';
     final String lastName = userData?['lastName'] ?? '';
     final String fullName = '$firstName $lastName'.trim().isEmpty
@@ -220,7 +213,14 @@ class AppDrawer extends StatelessWidget {
                 CustomListTile(
                   title: "Rides History",
                   icon: Icons.history_rounded,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => const TripHistoryScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const Gap(8),
                 CustomListTile(

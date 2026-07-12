@@ -213,4 +213,21 @@ class TripApiService {
       return {"error_type": "network_error"};
     }
   }
+
+  Future<Map<String, dynamic>?> getLastTrips({required int page, required int size}) async {
+    try {
+      final url = Uri.parse('$baseUrl/trips/last?page=$page&size=$size');
+      final headers = await _getHeaders();
+
+      if (headers == null) {
+        return {"error_type": "auth_error"};
+      }
+
+      final response = await http.get(url, headers: headers);
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - getLastTrips Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
 }
