@@ -5,7 +5,7 @@ import 'package:yaqood/Widgets/trip_route_card.dart';
 
 class ConfirmTripWidget extends StatelessWidget {
   final String startStreetName;
-  final String? destinationStreetName;
+  final String destinationStreetName;
   final double? distance;
   final double? duration;
   final VoidCallback onRequestPressed;
@@ -36,7 +36,7 @@ class ConfirmTripWidget extends StatelessWidget {
 
         TripRouteCard(
           startStreetName: startStreetName,
-          destinationStreetName: destinationStreetName!,
+          destinationStreetName: destinationStreetName,
         ),
 
         const Gap(16),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:yaqood/Utils/string_sanitizer.dart';
 
 class TripRouteCard extends StatelessWidget {
   final String startStreetName;
@@ -13,6 +14,8 @@ class TripRouteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final startIsFallback = StreetSanitizer.isFallback(startStreetName);
+    final destIsFallback = StreetSanitizer.isFallback(destinationStreetName);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -47,13 +50,13 @@ class TripRouteCard extends StatelessWidget {
                 children: [
                   Text(
                     startStreetName,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: startIsFallback ? Colors.grey[500] : Colors.black87),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Divider(height: 16),
                   Text(
                     destinationStreetName,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: destIsFallback ? Colors.grey[500] : Colors.black87),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

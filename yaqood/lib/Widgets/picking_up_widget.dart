@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:lottie/lottie.dart';
+import 'package:yaqood/Utils/string_sanitizer.dart';
 import 'package:yaqood/Widgets/Primary_color.dart';
 
 class PickingUpWidget extends StatelessWidget {
@@ -80,7 +81,7 @@ class PickingUpWidget extends StatelessWidget {
                   "Pickup Location: $startStreetName",
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade800,
+                    color: StreetSanitizer.isFallback(startStreetName) ? Colors.grey[500] : Colors.grey.shade800,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,

@@ -13,6 +13,7 @@ import 'package:yaqood/Services/map_helper.dart';
 import 'package:yaqood/Services/map_routing_service.dart';
 import 'package:yaqood/Services/profile_api_service.dart';
 import 'package:yaqood/Services/trip_api_service.dart';
+import 'package:yaqood/Utils/string_sanitizer.dart';
 import 'package:yaqood/Widgets/App_Drawer.dart';
 import 'package:yaqood/Widgets/Custom_SnackBar.dart';
 import 'package:yaqood/Widgets/Map/map_buttons.dart';
@@ -61,6 +62,8 @@ class _HomeState extends State<Home> {
 
   String? startStreetName;
   String? destinationStreetName;
+  String resolvedStartStreetName = 'Current Location';
+  String resolvedDestinationStreetName = 'Unknown Street';
   String? currentTripStatus;
   String? tripRequestId;
 
@@ -93,6 +96,39 @@ class _HomeState extends State<Home> {
   late VoidCallback _destinationFocusListener;
 
   Timer? tripPollingTimer;
+
+  bool _isResolvingNames = false;
+
+  Future<void> _resolveStreetNames() async {
+    if (_isResolvingNames) return;
+    _isResolvingNames = true;
+    try {
+      final newStart = startLocation != null
+          ? await StreetSanitizer.resolvePickupName(
+              rawName: startStreetName,
+              pickupLatLng: startLocation!,
+              locationService: _locationService,
+              userLatLng: currentLocation,
+            )
+          : 'Current Location';
+
+      final newDest = destinationLocation != null
+          ? await StreetSanitizer.resolveDestinationName(
+              rawName: destinationStreetName,
+              destinationLatLng: destinationLocation!,
+              locationService: _locationService,
+            )
+          : 'Unknown Street';
+
+      if (!mounted) return;
+      setState(() {
+        resolvedStartStreetName = newStart;
+        resolvedDestinationStreetName = newDest;
+      });
+    } finally {
+      _isResolvingNames = false;
+    }
+  }
 
   RideStep currentStep = RideStep.initial;
 
@@ -149,6 +185,7 @@ class _HomeState extends State<Home> {
               startController.text = street;
             });
 
+            _resolveStreetNames();
             mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
           }
 
@@ -312,6 +349,7 @@ class _HomeState extends State<Home> {
       destinationLocation = null;
       destinationStreetName = null;
     });
+    _resolveStreetNames();
   }
 
   // Bottom sheet animation
@@ -669,13 +707,15 @@ class _HomeState extends State<Home> {
   }
 
   void _onStartLocationChanged(LatLng location, Prediction prediction) {
+    final rawName = prediction.description?.split('،')[0] ?? "";
     setState(() {
       isSelectedFromSearch = true;
       startLocation = location;
-      final streetName = prediction.description?.split('،')[0] ?? "";
+      startStreetName = rawName;
       startController.text = prediction.description!;
-      startStreetName = streetName;
     });
+
+    _resolveStreetNames();
 
     if (startLocation != null && destinationLocation != null) {
       _initializeTrip();
@@ -689,15 +729,19 @@ class _HomeState extends State<Home> {
       startStreetName = null;
       clearRoute();
     });
+    _resolveStreetNames();
   }
 
   void _onDestinationChanged(LatLng location, Prediction prediction) {
+    final rawName = prediction.description?.split('،')[0] ?? "";
     setState(() {
       isSelectedFromSearch = true;
       destinationLocation = location;
-      destinationStreetName = prediction.description?.split('،')[0] ?? "";
+      destinationStreetName = rawName;
       destinationController.text = prediction.description!;
     });
+
+    _resolveStreetNames();
 
     if (startLocation != null && destinationLocation != null) {
       _initializeTrip();
@@ -711,6 +755,7 @@ class _HomeState extends State<Home> {
       destinationStreetName = null;
       clearRoute();
     });
+    _resolveStreetNames();
   }
 
   void _initializeTrip() {
@@ -1046,6 +1091,7 @@ class _HomeState extends State<Home> {
                           startController.text = street;
                         });
 
+                        _resolveStreetNames();
                         openSheet(Constants.collapseSheetSize);
                       }
                     },
@@ -1060,7 +1106,7 @@ class _HomeState extends State<Home> {
 
                 // info window
                 MapInfoWindow(
-                  startStreetName: startStreetName,
+                  startStreetName: resolvedStartStreetName,
                   isMapMoving: isMapMoving,
                   sheetSize: sheetSize,
                   showInfoWindow: showInfoWindow,
@@ -1191,9 +1237,8 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.confirmTrip)
                             ConfirmTripWidget(
-                              startStreetName:
-                                  startStreetName ?? "Current Location",
-                              destinationStreetName: destinationStreetName!,
+                              startStreetName: resolvedStartStreetName,
+                              destinationStreetName: resolvedDestinationStreetName,
                               onRequestPressed: () async {
                                 await startTripFlow();
                               },
@@ -1221,9 +1266,8 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.offer)
                             TripOfferWidget(
-                              startStreetName:
-                                  startStreetName ?? "Current Location",
-                              destinationStreetName: destinationStreetName!,
+                              startStreetName: resolvedStartStreetName,
+                              destinationStreetName: resolvedDestinationStreetName,
                               estimatedTime: offerTime ?? 0,
                               estimatedFare: offerFare ?? 0,
                               distance: tripDistance ?? 0,
@@ -1260,8 +1304,7 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.pickingUp)
                             PickingUpWidget(
-                              startStreetName:
-                                  startStreetName ?? "Current Location",
+                              startStreetName: resolvedStartStreetName,
                               distance: tripDistance,
                               duration: tripDuration,
                             ),
@@ -1275,8 +1318,7 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.enRoute)
                             EnRouteWidget(
-                              destinationStreetName:
-                                  destinationStreetName ?? "Destination",
+                              destinationStreetName: resolvedDestinationStreetName,
                               distance: tripDistance,
                               duration: tripDuration,
                             ),

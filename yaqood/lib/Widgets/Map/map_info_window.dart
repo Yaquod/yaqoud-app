@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:yaqood/Utils/string_sanitizer.dart';
 
 class MapInfoWindow extends StatelessWidget {
-  final String? startStreetName;
+  final String startStreetName;
   final bool isMapMoving;
   final double sheetSize;
   final bool showInfoWindow;
@@ -18,7 +19,8 @@ class MapInfoWindow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (startStreetName == null || isMapMoving || sheetSize >= 0.5 || !showInfoWindow) {
+    final bool isFallback = StreetSanitizer.isFallback(startStreetName);
+    if (isMapMoving || sheetSize >= 0.5 || !showInfoWindow) {
       return const SizedBox.shrink();
     }
 
@@ -55,8 +57,8 @@ class MapInfoWindow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        startStreetName!,
-                        style: const TextStyle(fontSize: 16, color: Colors.black),
+                        startStreetName,
+                        style: TextStyle(fontSize: 16, color: isFallback ? Colors.grey[500] : Colors.black),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
