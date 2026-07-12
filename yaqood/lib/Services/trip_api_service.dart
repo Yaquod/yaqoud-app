@@ -214,7 +214,10 @@ class TripApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> getLastTrips({required int page, required int size}) async {
+  Future<Map<String, dynamic>?> getLastTrips({
+    required int page,
+    required int size,
+  }) async {
     try {
       final url = Uri.parse('$baseUrl/trips/last?page=$page&size=$size');
       final headers = await _getHeaders();
@@ -227,6 +230,36 @@ class TripApiService {
       return jsonDecode(response.body);
     } catch (e) {
       print("TripApiService - getLastTrips Error: $e");
+      return {"error_type": "network_error"};
+    }
+  }
+
+  Future<Map<String, dynamic>?> submitTripRating({
+    required String tripRequestId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/ratings');
+      final headers = await _getHeaders();
+
+      if (headers == null) return {"error_type": "auth_error"};
+
+      final body = jsonEncode({
+        "tripId": tripRequestId,
+        "ratingValue": rating,
+        "comment": comment,
+      });
+
+      print("🚀 Sending Rating to Backend: $body");
+      final response = await http.post(url, headers: headers, body: body);
+      print(
+        "📩 Backend Response Status: ${response.statusCode}, Body: ${response.body}",
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      print("TripApiService - submitTripRating Error: $e");
       return {"error_type": "network_error"};
     }
   }

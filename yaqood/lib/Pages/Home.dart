@@ -914,6 +914,39 @@ class _HomeState extends State<Home> {
     }
   }
 
+  Future<void> handleSubmitRating({
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      await TripApiService().submitTripRating(
+        tripRequestId: tripRequestId!,
+        rating: rating,
+        comment: comment,
+      );
+
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        showSnackBar(
+          context: context,
+          message: "Thank you! Your review has been submitted.",
+          isError: false,
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      print("⚠️ Error raised during rating submission: $e");
+
+      if (mounted) {
+        showSnackBar(
+          context: context,
+          message: "Failed to submit review. Please try again.",
+        );
+      }
+    }
+  }
+
   // init State
   @override
   void initState() {
@@ -1238,7 +1271,8 @@ class _HomeState extends State<Home> {
                           if (currentStep == RideStep.confirmTrip)
                             ConfirmTripWidget(
                               startStreetName: resolvedStartStreetName,
-                              destinationStreetName: resolvedDestinationStreetName,
+                              destinationStreetName:
+                                  resolvedDestinationStreetName,
                               onRequestPressed: () async {
                                 await startTripFlow();
                               },
@@ -1267,7 +1301,8 @@ class _HomeState extends State<Home> {
                           if (currentStep == RideStep.offer)
                             TripOfferWidget(
                               startStreetName: resolvedStartStreetName,
-                              destinationStreetName: resolvedDestinationStreetName,
+                              destinationStreetName:
+                                  resolvedDestinationStreetName,
                               estimatedTime: offerTime ?? 0,
                               estimatedFare: offerFare ?? 0,
                               distance: tripDistance ?? 0,
@@ -1318,7 +1353,8 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.enRoute)
                             EnRouteWidget(
-                              destinationStreetName: resolvedDestinationStreetName,
+                              destinationStreetName:
+                                  resolvedDestinationStreetName,
                               distance: tripDistance,
                               duration: tripDuration,
                             ),
@@ -1332,7 +1368,9 @@ class _HomeState extends State<Home> {
 
                           if (currentStep == RideStep.completed)
                             TripCompleteWidget(
-                              onSubmitRating: (rating, comment) {
+                              onSubmitRating: (rating, comment) async{
+                                await handleSubmitRating(rating: rating, comment: comment );
+                                
                                 _resetToHomeScreen();
                               },
                               onSkipRating: () {
